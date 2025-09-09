@@ -205,7 +205,7 @@ func main() {
 		w.Write([]byte(`
 			<!DOCTYPE html>
 			<html>
-			<head><title>Pricing - Event Ticketing Platform</title></head>
+			<head><title>Pricing - Runtown</title></head>
 			<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
 				<h1>Pricing Plans</h1>
 				<p>Our pricing plans are coming soon. For now, event creation is free!</p>
@@ -219,7 +219,7 @@ func main() {
 		w.Write([]byte(`
 			<!DOCTYPE html>
 			<html>
-			<head><title>Help Center - Event Ticketing Platform</title></head>
+			<head><title>Help Center - Runtown</title></head>
 			<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
 				<h1>Help Center</h1>
 				<p>Help documentation is coming soon. For support, please contact us.</p>
@@ -233,7 +233,7 @@ func main() {
 		w.Write([]byte(`
 			<!DOCTYPE html>
 			<html>
-			<head><title>Contact Us - Event Ticketing Platform</title></head>
+			<head><title>Contact Us - Runtown</title></head>
 			<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
 				<h1>Contact Us</h1>
 				<p>Contact form is coming soon. For immediate support, please email us.</p>
@@ -247,7 +247,7 @@ func main() {
 		w.Write([]byte(`
 			<!DOCTYPE html>
 			<html>
-			<head><title>Resources - Event Ticketing Platform</title></head>
+			<head><title>Resources - Runtown</title></head>
 			<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
 				<h1>Resources</h1>
 				<p>Resource library is coming soon. Check back later for guides and tutorials.</p>
@@ -463,7 +463,7 @@ func main() {
 	// Health check endpoint
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok","service":"event-ticketing-platform"}`))
+		w.Write([]byte(`{"status":"ok","service":"Runtown"}`))
 	})
 
 	serverAddr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
@@ -503,3 +503,4 @@ func setupSimpleRoutes(cfg *config.Config) {
 	log.Printf("Server starting on %s (Environment: %s) - Simple Mode", serverAddr, cfg.Server.Env)
 	log.Fatal(http.ListenAndServe(serverAddr, r))
 }
+
