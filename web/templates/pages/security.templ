@@ -1,0 +1,229 @@
+package pages
+
+import "event-ticketing-platform/internal/models"
+import "event-ticketing-platform/web/templates/layouts"
+
+templ SecurityPage(user *models.User, errors map[string][]string, formData map[string]string, success bool) {
+	@layouts.BaseLayout("Security Settings", user) {
+		<div class="min-h-screen bg-gray-50">
+			<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+				<!-- Header -->
+				<div class="mb-8">
+					<div class="flex items-center justify-between">
+						<div>
+							<h1 class="text-3xl font-bold text-gray-900">Security Settings</h1>
+							<p class="text-gray-600 mt-2">Manage your password and account security</p>
+						</div>
+						<a href="/dashboard" class="text-primary-600 hover:text-primary-500 font-medium">
+							← Back to Dashboard
+						</a>
+					</div>
+				</div>
+
+				<!-- Navigation Tabs -->
+				<div class="mb-8">
+					<nav class="flex space-x-8">
+						<a href="/dashboard/profile" class="border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-2 px-1 text-sm font-medium">
+							Profile
+						</a>
+						<a href="/dashboard/security" class="border-b-2 border-primary-500 text-primary-600 py-2 px-1 text-sm font-medium">
+							Security
+						</a>
+						<a href="/dashboard/settings" class="border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-2 px-1 text-sm font-medium">
+							Settings
+						</a>
+					</nav>
+				</div>
+
+				<!-- Success Message -->
+				if success {
+					<div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+						<div class="flex">
+							<svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							</svg>
+							<div class="ml-3">
+								<p class="text-sm font-medium text-green-800">
+									Password changed successfully!
+								</p>
+							</div>
+						</div>
+					</div>
+				}
+
+				<!-- Change Password Form -->
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h2 class="text-lg font-medium text-gray-900">Change Password</h2>
+						<p class="text-sm text-gray-500 mt-1">Update your password to keep your account secure.</p>
+					</div>
+					
+					<form hx-post="/dashboard/security/change-password" hx-target="body" hx-swap="outerHTML" class="p-6">
+						<!-- General Errors -->
+						if generalErrors, hasGeneral := errors["general"]; hasGeneral {
+							<div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+								<div class="flex">
+									<svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+									</svg>
+									<div class="ml-3">
+										for _, err := range generalErrors {
+											<p class="text-sm font-medium text-red-800">{ err }</p>
+										}
+									</div>
+								</div>
+							</div>
+						}
+
+						<!-- Current Password -->
+						<div class="mb-6">
+							<label for="current_password" class="block text-sm font-medium text-gray-700 mb-2">
+								Current Password
+							</label>
+							<input
+								type="password"
+								id="current_password"
+								name="current_password"
+								class={ "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent",
+									templ.KV("border-red-300 bg-red-50", len(errors["current_password"]) > 0),
+									templ.KV("border-gray-300", len(errors["current_password"]) == 0) }
+								required
+							/>
+							if fieldErrors, hasErrors := errors["current_password"]; hasErrors {
+								<div class="mt-1">
+									for _, err := range fieldErrors {
+										<p class="text-sm text-red-600">{ err }</p>
+									}
+								</div>
+							}
+						</div>
+
+						<!-- New Password -->
+						<div class="mb-6">
+							<label for="new_password" class="block text-sm font-medium text-gray-700 mb-2">
+								New Password
+							</label>
+							<input
+								type="password"
+								id="new_password"
+								name="new_password"
+								class={ "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent",
+									templ.KV("border-red-300 bg-red-50", len(errors["new_password"]) > 0),
+									templ.KV("border-gray-300", len(errors["new_password"]) == 0) }
+								required
+								minlength="8"
+							/>
+							if fieldErrors, hasErrors := errors["new_password"]; hasErrors {
+								<div class="mt-1">
+									for _, err := range fieldErrors {
+										<p class="text-sm text-red-600">{ err }</p>
+									}
+								</div>
+							}
+							<p class="mt-1 text-sm text-gray-500">
+								Password must be at least 8 characters long.
+							</p>
+						</div>
+
+						<!-- Confirm New Password -->
+						<div class="mb-6">
+							<label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-2">
+								Confirm New Password
+							</label>
+							<input
+								type="password"
+								id="confirm_password"
+								name="confirm_password"
+								class={ "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent",
+									templ.KV("border-red-300 bg-red-50", len(errors["confirm_password"]) > 0),
+									templ.KV("border-gray-300", len(errors["confirm_password"]) == 0) }
+								required
+							/>
+							if fieldErrors, hasErrors := errors["confirm_password"]; hasErrors {
+								<div class="mt-1">
+									for _, err := range fieldErrors {
+										<p class="text-sm text-red-600">{ err }</p>
+									}
+								</div>
+							}
+						</div>
+
+						<!-- Submit Button -->
+						<div class="flex justify-end space-x-3">
+							<a href="/dashboard" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+								Cancel
+							</a>
+							<button
+								type="submit"
+								class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors"
+							>
+								Change Password
+							</button>
+						</div>
+					</form>
+				</div>
+
+				<!-- Security Information -->
+				<div class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h2 class="text-lg font-medium text-gray-900">Security Information</h2>
+					</div>
+					<div class="p-6">
+						<div class="space-y-4">
+							<div class="flex items-center justify-between py-3 border-b border-gray-200">
+								<div>
+									<h3 class="text-sm font-medium text-gray-900">Two-Factor Authentication</h3>
+									<p class="text-sm text-gray-500">Add an extra layer of security to your account</p>
+								</div>
+								<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+									Not Enabled
+								</span>
+							</div>
+							
+							<div class="flex items-center justify-between py-3 border-b border-gray-200">
+								<div>
+									<h3 class="text-sm font-medium text-gray-900">Login Notifications</h3>
+									<p class="text-sm text-gray-500">Get notified when someone logs into your account</p>
+								</div>
+								<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+									Enabled
+								</span>
+							</div>
+							
+							<div class="flex items-center justify-between py-3">
+								<div>
+									<h3 class="text-sm font-medium text-gray-900">Active Sessions</h3>
+									<p class="text-sm text-gray-500">Manage devices that are currently logged in</p>
+								</div>
+								<button class="text-primary-600 hover:text-primary-500 text-sm font-medium">
+									View Sessions
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Password Tips -->
+				<div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+					<div class="flex">
+						<svg class="h-5 w-5 text-blue-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+						</svg>
+						<div class="ml-3">
+							<h3 class="text-sm font-medium text-blue-800">Password Security Tips</h3>
+							<div class="mt-2 text-sm text-blue-700">
+								<ul class="list-disc list-inside space-y-1">
+									<li>Use a unique password that you don't use elsewhere</li>
+									<li>Include a mix of uppercase, lowercase, numbers, and symbols</li>
+									<li>Make it at least 12 characters long</li>
+									<li>Consider using a password manager</li>
+									<li>Don't share your password with anyone</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}

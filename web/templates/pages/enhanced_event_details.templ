@@ -1,0 +1,278 @@
+package pages
+
+import (
+	"event-ticketing-platform/internal/models"
+	"event-ticketing-platform/web/templates/layouts"
+	"fmt"
+)
+
+// EnhancedEventDetailsPage renders the enhanced event details page
+templ EnhancedEventDetailsPage(user *models.User, event *models.Event, ticketTypes []*models.TicketType, organizer *models.User, similarEvents []*models.Event, recommendations []*models.Event) {
+	@layouts.BaseLayout(event.Title + " - EventHub", user) {
+		<div class="min-h-screen bg-gray-50">
+			<!-- Event Hero Section -->
+			<div class="relative">
+				<div class="h-96 bg-gradient-to-r from-gray-900 to-gray-700">
+					if event.ImageURL != "" {
+						<img src={ event.ImageURL } alt={ event.Title } class="w-full h-full object-cover"/>
+						<div class="absolute inset-0 bg-black bg-opacity-40"></div>
+					}
+				</div>
+				
+				<!-- Event Info Overlay -->
+				<div class="absolute bottom-0 left-0 right-0 p-8 text-white">
+					<div class="max-w-7xl mx-auto">
+						<div class="flex items-start justify-between">
+							<div class="flex-1">
+								<div class="flex items-center space-x-2 mb-2">
+									if event.Category != nil {
+										<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+											{ event.Category.Name }
+										</span>
+									}
+									<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+										Available
+									</span>
+								</div>
+								<h1 class="text-4xl font-bold mb-4">{ event.Title }</h1>
+								<div class="flex items-center space-x-6 text-lg">
+									<div class="flex items-center">
+										<svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+										</svg>
+										{ event.StartDate.Format("Monday, January 2, 2006 at 3:04 PM") }
+									</div>
+									<div class="flex items-center">
+										<svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+										</svg>
+										{ event.Location }
+									</div>
+								</div>
+							</div>
+							
+							<!-- Quick Actions -->
+							<div class="flex items-center space-x-4">
+								<button class="p-3 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
+									<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+									</svg>
+								</button>
+								<button class="p-3 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
+									<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+									</svg>
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+					<!-- Main Content -->
+					<div class="lg:col-span-2 space-y-8">
+						<!-- Event Description -->
+						<div class="bg-white rounded-lg shadow-lg p-6">
+							<h2 class="text-2xl font-bold text-gray-900 mb-4">About This Event</h2>
+							<div class="prose max-w-none">
+								<p class="text-gray-700 leading-relaxed">{ event.Description }</p>
+							</div>
+						</div>
+
+						<!-- Event Details -->
+						<div class="bg-white rounded-lg shadow-lg p-6">
+							<h2 class="text-2xl font-bold text-gray-900 mb-4">Event Details</h2>
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+								<div>
+									<h3 class="font-semibold text-gray-900 mb-2">Date & Time</h3>
+									<div class="space-y-1">
+										<p class="text-gray-700">{ event.StartDate.Format("Monday, January 2, 2006") }</p>
+										<p class="text-gray-700">{ event.StartDate.Format("3:04 PM") } - { event.EndDate.Format("3:04 PM") }</p>
+									</div>
+								</div>
+								<div>
+									<h3 class="font-semibold text-gray-900 mb-2">Location</h3>
+									<p class="text-gray-700">{ event.Location }</p>
+								</div>
+								<div>
+									<h3 class="font-semibold text-gray-900 mb-2">Category</h3>
+									if event.Category != nil {
+										<p class="text-gray-700">{ event.Category.Name }</p>
+									} else {
+										<p class="text-gray-700">Uncategorized</p>
+									}
+								</div>
+								<div>
+									<h3 class="font-semibold text-gray-900 mb-2">Organizer</h3>
+									<p class="text-gray-700">{ organizer.FirstName } { organizer.LastName }</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Similar Events -->
+						if len(similarEvents) > 0 {
+							<div class="bg-white rounded-lg shadow-lg p-6">
+								<h2 class="text-2xl font-bold text-gray-900 mb-6">Similar Events</h2>
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+									for _, similarEvent := range similarEvents {
+										@EventCard(similarEvent, false)
+									}
+								</div>
+							</div>
+						}
+					</div>
+
+					<!-- Sidebar -->
+					<div class="space-y-6">
+						<!-- Ticket Selection -->
+						<div class="bg-white rounded-lg shadow-lg p-6 sticky top-4">
+							<h3 class="text-xl font-bold text-gray-900 mb-4">Select Tickets</h3>
+							
+							<div id="ticket-availability" 
+								 hx-get={ fmt.Sprintf("/events/%d/availability", event.ID) }
+								 hx-trigger="every 30s"
+								 hx-swap="outerHTML">
+								@TicketAvailabilityPartial(event, ticketTypes)
+							</div>
+						</div>
+
+						<!-- Event Stats -->
+						<div class="bg-white rounded-lg shadow-lg p-6">
+							<h3 class="text-lg font-semibold text-gray-900 mb-4">Event Stats</h3>
+							<div class="space-y-3">
+								<div class="flex justify-between">
+									<span class="text-gray-600">Interested</span>
+									<span class="font-semibold">127</span>
+								</div>
+								<div class="flex justify-between">
+									<span class="text-gray-600">Going</span>
+									<span class="font-semibold">89</span>
+								</div>
+								<div class="flex justify-between">
+									<span class="text-gray-600">Tickets Sold</span>
+									<span class="font-semibold">156</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Organizer Info -->
+						<div class="bg-white rounded-lg shadow-lg p-6">
+							<h3 class="text-lg font-semibold text-gray-900 mb-4">Organizer</h3>
+							<div class="flex items-center space-x-3 mb-4">
+								<div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+									<span class="text-lg font-semibold text-gray-600">
+										{ string(organizer.FirstName[0]) }{ string(organizer.LastName[0]) }
+									</span>
+								</div>
+								<div>
+									<p class="font-semibold text-gray-900">{ organizer.FirstName } { organizer.LastName }</p>
+									<p class="text-sm text-gray-600">Event Organizer</p>
+								</div>
+							</div>
+							<button class="w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+								Contact Organizer
+							</button>
+						</div>
+
+						<!-- Recommendations -->
+						if user != nil && len(recommendations) > 0 {
+							<div class="bg-white rounded-lg shadow-lg p-6">
+								<h3 class="text-lg font-semibold text-gray-900 mb-4">Recommended for You</h3>
+								<div class="space-y-4">
+									for _, rec := range recommendations {
+										<div class="flex items-center space-x-3">
+											<div class="w-16 h-12 bg-gray-200 rounded flex-shrink-0">
+												if rec.ImageURL != "" {
+													<img src={ rec.ImageURL } alt={ rec.Title } class="w-full h-full object-cover rounded"/>
+												}
+											</div>
+											<div class="flex-1 min-w-0">
+												<p class="text-sm font-medium text-gray-900 truncate">
+													<a href={ templ.URL(fmt.Sprintf("/events/%d", rec.ID)) } class="hover:text-indigo-600">
+														{ rec.Title }
+													</a>
+												</p>
+												<p class="text-xs text-gray-500">{ rec.StartDate.Format("Jan 2") }</p>
+											</div>
+										</div>
+									}
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// TicketAvailabilityPartial renders the ticket availability section
+templ TicketAvailabilityPartial(event *models.Event, ticketTypes []*models.TicketType) {
+	<div class="space-y-4">
+		for _, ticketType := range ticketTypes {
+			<div class="border border-gray-200 rounded-lg p-4">
+				<div class="flex justify-between items-start mb-2">
+					<div>
+						<h4 class="font-semibold text-gray-900">{ ticketType.Name }</h4>
+						<p class="text-sm text-gray-600">{ ticketType.Description }</p>
+					</div>
+					<div class="text-right">
+						<p class="text-lg font-bold text-gray-900">
+							KES { fmt.Sprintf("%.2f", float64(ticketType.Price)/100) }
+						</p>
+						<p class="text-sm text-gray-500">
+							{ fmt.Sprintf("%d", ticketType.Quantity - ticketType.Sold) } left
+						</p>
+					</div>
+				</div>
+				
+				if (ticketType.Quantity - ticketType.Sold) > 0 {
+					<form 
+						hx-post="/cart/add"
+						hx-target="#cart-feedback"
+						hx-swap="innerHTML"
+						class="flex items-center space-x-2"
+					>
+						<input type="hidden" name="csrf_token" value={ getCSRFToken(ctx) }/>
+						<input type="hidden" name="event_id" value={ fmt.Sprintf("%d", event.ID) }/>
+						<input type="hidden" name="ticket_type_id" value={ fmt.Sprintf("%d", ticketType.ID) }/>
+						<select name="quantity" class="border-gray-300 rounded-md text-sm">
+							for i := 1; i <= min(10, ticketType.Quantity - ticketType.Sold); i++ {
+								<option value={ fmt.Sprintf("%d", i) }>{ fmt.Sprintf("%d", i) }</option>
+							}
+						</select>
+						<button 
+							type="submit"
+							class="flex-1 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+						>
+							Add to Cart
+						</button>
+					</form>
+				} else {
+					<div class="text-center py-2">
+						<span class="text-sm font-medium text-red-600">Sold Out</span>
+					</div>
+				}
+			</div>
+		}
+		
+		<div id="cart-feedback" class="mt-4"></div>
+		
+		<!-- Quick Checkout Button -->
+		<div class="pt-4 border-t border-gray-200">
+			<a 
+				href="/cart"
+				class="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+			>
+				<svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5-6m0 0L4 5M7 13h10m0 0l1.5 6M17 13l1.5 6"></path>
+				</svg>
+				View Cart & Checkout
+			</a>
+		</div>
+	</div>
+}
+

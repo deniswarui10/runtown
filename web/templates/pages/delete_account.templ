@@ -1,0 +1,188 @@
+package pages
+
+import "event-ticketing-platform/internal/models"
+import "event-ticketing-platform/web/templates/layouts"
+
+templ DeleteAccountPage(user *models.User, errors map[string][]string, formData map[string]string) {
+	@layouts.BaseLayout("Delete Account", user) {
+		<div class="min-h-screen bg-gray-50">
+			<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+				<!-- Header -->
+				<div class="mb-8">
+					<div class="flex items-center justify-between">
+						<div>
+							<h1 class="text-3xl font-bold text-red-900">Delete Account</h1>
+							<p class="text-red-600 mt-2">This action cannot be undone</p>
+						</div>
+						<a href="/dashboard/profile" class="text-primary-600 hover:text-primary-500 font-medium">
+							← Back to Profile
+						</a>
+					</div>
+				</div>
+
+				<!-- Warning Card -->
+				<div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+					<div class="flex">
+						<svg class="h-6 w-6 text-red-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+						</svg>
+						<div class="ml-3">
+							<h3 class="text-lg font-medium text-red-800">Warning: Account Deletion</h3>
+							<div class="mt-2 text-sm text-red-700">
+								<p class="mb-2">Deleting your account will permanently remove:</p>
+								<ul class="list-disc list-inside space-y-1">
+									<li>Your profile and personal information</li>
+									<li>All order history and tickets</li>
+									<li>Event preferences and settings</li>
+									<li>Any saved payment methods</li>
+									<li>Access to future events you have purchased tickets for</li>
+								</ul>
+								<p class="mt-3 font-medium">This action cannot be undone and your data cannot be recovered.</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Account Summary -->
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h2 class="text-lg font-medium text-gray-900">Account Summary</h2>
+					</div>
+					<div class="p-6">
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div>
+								<label class="block text-sm font-medium text-gray-500">Name</label>
+								<p class="mt-1 text-sm text-gray-900">{ user.FirstName } { user.LastName }</p>
+							</div>
+							<div>
+								<label class="block text-sm font-medium text-gray-500">Email</label>
+								<p class="mt-1 text-sm text-gray-900">{ user.Email }</p>
+							</div>
+							<div>
+								<label class="block text-sm font-medium text-gray-500">Account Type</label>
+								<p class="mt-1 text-sm text-gray-900 capitalize">{ string(user.Role) }</p>
+							</div>
+							<div>
+								<label class="block text-sm font-medium text-gray-500">Member Since</label>
+								<p class="mt-1 text-sm text-gray-900">{ user.CreatedAt.Format("January 2, 2006") }</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Deletion Form -->
+				<div class="bg-white rounded-lg shadow-sm border border-red-200">
+					<div class="px-6 py-4 border-b border-red-200">
+						<h2 class="text-lg font-medium text-red-900">Confirm Account Deletion</h2>
+						<p class="text-sm text-red-600 mt-1">Please confirm that you want to permanently delete your account.</p>
+					</div>
+					
+					<form hx-post="/dashboard/delete-account" hx-target="body" hx-swap="outerHTML" class="p-6">
+						<!-- General Errors -->
+						if generalErrors, hasGeneral := errors["general"]; hasGeneral {
+							<div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+								<div class="flex">
+									<svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+									</svg>
+									<div class="ml-3">
+										for _, err := range generalErrors {
+											<p class="text-sm font-medium text-red-800">{ err }</p>
+										}
+									</div>
+								</div>
+							</div>
+						}
+
+						<!-- Password Confirmation -->
+						<div class="mb-6">
+							<label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+								Confirm Your Password
+							</label>
+							<input
+								type="password"
+								id="password"
+								name="password"
+								placeholder="Enter your current password"
+								class={ "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent",
+									templ.KV("border-red-300 bg-red-50", len(errors["password"]) > 0),
+									templ.KV("border-gray-300", len(errors["password"]) == 0) }
+								required
+							/>
+							if fieldErrors, hasErrors := errors["password"]; hasErrors {
+								<div class="mt-1">
+									for _, err := range fieldErrors {
+										<p class="text-sm text-red-600">{ err }</p>
+									}
+								</div>
+							}
+							<p class="mt-1 text-sm text-gray-500">
+								Enter your current password to confirm your identity.
+							</p>
+						</div>
+
+						<!-- Confirmation Text -->
+						<div class="mb-6">
+							<label for="confirmation" class="block text-sm font-medium text-gray-700 mb-2">
+								Type "DELETE" to confirm
+							</label>
+							<input
+								type="text"
+								id="confirmation"
+								name="confirmation"
+								value={ getFormValue(formData, "confirmation", "") }
+								placeholder="DELETE"
+								class={ "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent",
+									templ.KV("border-red-300 bg-red-50", len(errors["confirmation"]) > 0),
+									templ.KV("border-gray-300", len(errors["confirmation"]) == 0) }
+								required
+							/>
+							if fieldErrors, hasErrors := errors["confirmation"]; hasErrors {
+								<div class="mt-1">
+									for _, err := range fieldErrors {
+										<p class="text-sm text-red-600">{ err }</p>
+									}
+								</div>
+							}
+							<p class="mt-1 text-sm text-gray-500">
+								Type the word "DELETE" in capital letters to confirm.
+							</p>
+						</div>
+
+						<!-- Final Warning -->
+						<div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+							<div class="flex">
+								<svg class="h-5 w-5 text-yellow-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+								</svg>
+								<div class="ml-3">
+									<p class="text-sm font-medium text-yellow-800">
+										Are you absolutely sure you want to delete your account?
+									</p>
+									<p class="text-sm text-yellow-700 mt-1">
+										This will immediately cancel any active orders and you will lose access to all purchased tickets.
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Action Buttons -->
+						<div class="flex justify-end space-x-3">
+							<a href="/dashboard/profile" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+								Cancel
+							</a>
+							<button
+								type="submit"
+								class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+								onclick="return confirm('Are you absolutely sure? This action cannot be undone!')"
+							>
+								Delete My Account
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	}
+}
+

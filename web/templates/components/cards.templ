@@ -1,0 +1,176 @@
+package components
+
+import (
+	"event-ticketing-platform/internal/models"
+	"fmt"
+	"time"
+)
+
+// Event card component for listing pages
+templ EventCard(event *models.Event, showOrganizer bool) {
+	<div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+		<div class="relative">
+			if event.ImageURL != "" {
+				<img src={ event.ImageURL } alt={ event.Title } class="w-full h-56 object-cover"/>
+			} else {
+				<div class="w-full h-56 bg-gradient-to-r from-primary-500 to-purple-600 flex items-center justify-center">
+					<svg class="h-20 w-20 text-white opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+					</svg>
+				</div>
+			}
+			<div class="absolute top-4 right-4">
+				<span class={ "px-3 py-1 text-xs font-medium rounded-full",
+					templ.KV("bg-green-100 text-green-800", event.Status == models.StatusPublished),
+					templ.KV("bg-yellow-100 text-yellow-800", event.Status == models.StatusDraft),
+					templ.KV("bg-red-100 text-red-800", event.Status == models.StatusCancelled) }>
+					{ string(event.Status) }
+				</span>
+			</div>
+		</div>
+		
+		<div class="p-6">
+			<div class="flex items-start justify-between mb-3">
+				<h3 class="text-xl font-bold text-gray-900 line-clamp-2">
+					<a href={ templ.URL(fmt.Sprintf("/events/%d", event.ID)) } class="hover:text-primary-600 transition-colors">
+						{ event.Title }
+					</a>
+				</h3>
+			</div>
+			
+			<p class="text-gray-600 text-base mb-4 line-clamp-3">{ event.Description }</p>
+			
+			<div class="space-y-3 mb-5">
+				<div class="flex items-center text-sm text-gray-500">
+					<svg class="h-5 w-5 mr-2 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+					</svg>
+					<span class="font-medium">{ event.StartDate.Format("Mon, Jan 2, 2006") }</span>
+				</div>
+				
+				<div class="flex items-center text-sm text-gray-500">
+					<svg class="h-5 w-5 mr-2 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+					</svg>
+					<span class="font-medium">{ event.Location }</span>
+				</div>
+			</div>
+			
+			<div class="flex items-center justify-between">
+				if showOrganizer {
+					<div class="text-sm text-gray-500">
+						<span>by Organizer</span>
+					</div>
+				}
+				<a 
+					href={ templ.URL(fmt.Sprintf("/events/%d", event.ID)) }
+					class="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-lg text-base font-medium transition-colors inline-flex items-center"
+				>
+					View Details
+					<svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+					</svg>
+				</a>
+			</div>
+		</div>
+	</div>
+}
+
+// Compact event card for dashboard
+templ EventCardCompact(event *models.Event) {
+	<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+		<div class="flex items-start space-x-4">
+			<div class="flex-shrink-0">
+				if event.ImageURL != "" {
+					<img src={ event.ImageURL } alt={ event.Title } class="w-16 h-16 rounded-lg object-cover"/>
+				} else {
+					<div class="w-16 h-16 bg-gradient-to-r from-primary-400 to-purple-500 rounded-lg flex items-center justify-center">
+						<svg class="h-8 w-8 text-white opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+						</svg>
+					</div>
+				}
+			</div>
+			
+			<div class="flex-1 min-w-0">
+				<div class="flex items-start justify-between">
+					<div>
+						<h4 class="text-sm font-medium text-gray-900 truncate">
+							<a href={ templ.URL(fmt.Sprintf("/events/%d", event.ID)) } class="hover:text-primary-600">
+								{ event.Title }
+							</a>
+						</h4>
+						<p class="text-sm text-gray-500 mt-1">{ event.StartDate.Format("Jan 2, 2006") }</p>
+					</div>
+					<span class={ "px-2 py-1 text-xs font-medium rounded-full",
+						templ.KV("bg-green-100 text-green-800", event.Status == models.StatusPublished),
+						templ.KV("bg-yellow-100 text-yellow-800", event.Status == models.StatusDraft),
+						templ.KV("bg-red-100 text-red-800", event.Status == models.StatusCancelled) }>
+						{ string(event.Status) }
+					</span>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+// Order card component
+templ OrderCard(order *models.Order, event *models.Event) {
+	<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+		<div class="flex items-start justify-between mb-4">
+			<div class="flex items-start space-x-4">
+				if event.ImageURL != "" {
+					<img src={ event.ImageURL } alt={ event.Title } class="w-16 h-16 rounded-lg object-cover"/>
+				} else {
+					<div class="w-16 h-16 bg-gradient-to-r from-primary-400 to-purple-500 rounded-lg flex items-center justify-center">
+						<svg class="h-8 w-8 text-white opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+						</svg>
+					</div>
+				}
+				<div>
+					<h4 class="text-lg font-medium text-gray-900">{ event.Title }</h4>
+					<p class="text-sm text-gray-500 mt-1">{ event.StartDate.Format("Monday, January 2, 2006 at 3:04 PM") }</p>
+					<p class="text-sm text-gray-500">{ event.Location }</p>
+					<p class="text-sm text-gray-500 mt-1">Order #{ order.OrderNumber }</p>
+				</div>
+			</div>
+			<div class="text-right">
+				<span class={ "px-3 py-1 text-sm font-medium rounded-full",
+					templ.KV("bg-green-100 text-green-800", order.Status == models.OrderCompleted),
+					templ.KV("bg-yellow-100 text-yellow-800", order.Status == models.OrderPending),
+					templ.KV("bg-red-100 text-red-800", order.Status == models.OrderCancelled || order.Status == models.OrderRefunded) }>
+					{ string(order.Status) }
+				</span>
+				<p class="text-lg font-semibold text-gray-900 mt-2">${ fmt.Sprintf("%.2f", float64(order.TotalAmount)/100) }</p>
+			</div>
+		</div>
+		
+		<div class="pt-4 border-t border-gray-200">
+			<div class="flex items-center justify-between">
+				<div class="flex space-x-3">
+					<a 
+						href={ templ.URL(fmt.Sprintf("/dashboard/orders/%d", order.ID)) }
+						class="text-primary-600 hover:text-primary-500 text-sm font-medium"
+					>
+						View Details
+					</a>
+					if order.Status == models.OrderCompleted {
+						<a 
+							href={ templ.URL(fmt.Sprintf("/dashboard/orders/%d/tickets/download", order.ID)) }
+							class="text-green-600 hover:text-green-500 text-sm font-medium"
+						>
+							Download Tickets
+						</a>
+					}
+				</div>
+				if event.StartDate.After(time.Now()) {
+					<span class="text-sm text-green-600 font-medium">Upcoming Event</span>
+				} else {
+					<span class="text-sm text-gray-500">Past Event</span>
+				}
+			</div>
+		</div>
+	</div>
+}

@@ -1,0 +1,1062 @@
+package repositories
+
+import (
+	"database/sql"
+	"fmt"
+	"strings"
+	"time"
+
+	"event-ticketing-platform/internal/models"
+)
+
+// EventRepository handles event data operations
+type EventRepository struct {
+	db *sql.DB
+}
+
+// NewEventRepository creates a new event repository
+func NewEventRepository(db *sql.DB) *EventRepository {
+	return &EventRepository{db: db}
+}
+
+// EventSearchFilters represents filters for event search
+type EventSearchFilters struct {
+	Query      string              // Search query for title/description
+	CategoryID int                 // Filter by category
+	Location   string              // Filter by location
+	Status     models.EventStatus  // Filter by status
+	DateFrom   *time.Time          // Filter events starting from this date
+	DateTo     *time.Time          // Filter events ending before this date
+	PriceMin   *int                // Minimum price filter (in cents)
+	PriceMax   *int                // Maximum price filter (in cents)
+	Limit      int                 // Number of results to return
+	Offset     int                 // Number of results to skip
+	SortBy     string              // "created_at", "start_date", "title"
+	SortDesc   bool                // Sort in descending order
+}
+
+// Create creates a new event
+func (r *EventRepository) Create(req *models.EventCreateRequest, organizerID int) (*models.Event, error) {
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	query := `
+		INSERT INTO events (title, description, start_date, end_date, location, category_id, organizer_id, image_url, image_key, image_size, image_format, image_width, image_height, image_uploaded_at, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		RETURNING id, title, description, start_date, end_date, location, category_id, organizer_id, image_url, image_key, image_size, image_format, image_width, image_height, image_uploaded_at, status, created_at, updated_at`
+
+	now := time.Now()
+	event := &models.Event{}
+
+	var imageUploadedAt *time.Time
+	if req.ImageKey != "" {
+		imageUploadedAt = &now
+	}
+
+	err := r.db.QueryRow(
+		query,
+		req.Title,
+		req.Description,
+		req.StartDate,
+		req.EndDate,
+		req.Location,
+		req.CategoryID,
+		organizerID,
+		req.ImageURL,
+		req.ImageKey,
+		req.ImageSize,
+		req.ImageFormat,
+		req.ImageWidth,
+		req.ImageHeight,
+		imageUploadedAt,
+		req.Status,
+		now,
+		now,
+	).Scan(
+		&event.ID,
+		&event.Title,
+		&event.Description,
+		&event.StartDate,
+		&event.EndDate,
+		&event.Location,
+		&event.CategoryID,
+		&event.OrganizerID,
+		&event.ImageURL,
+		&event.ImageKey,
+		&event.ImageSize,
+		&event.ImageFormat,
+		&event.ImageWidth,
+		&event.ImageHeight,
+		&event.ImageUploadedAt,
+		&event.Status,
+		&event.CreatedAt,
+		&event.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create event: %w", err)
+	}
+
+	return event, nil
+}
+
+// GetByID retrieves an event by ID
+func (r *EventRepository) GetByID(id int) (*models.Event, error) {
+	query := `
+		SELECT id, title, description, start_date, end_date, location, category_id, organizer_id, image_url, image_key, image_size, image_format, image_width, image_height, image_uploaded_at, status, created_at, updated_at
+		FROM events
+		WHERE id = $1`
+
+	event := &models.Event{}
+	err := r.db.QueryRow(query, id).Scan(
+		&event.ID,
+		&event.Title,
+		&event.Description,
+		&event.StartDate,
+		&event.EndDate,
+		&event.Location,
+		&event.CategoryID,
+		&event.OrganizerID,
+		&event.ImageURL,
+		&event.ImageKey,
+		&event.ImageSize,
+		&event.ImageFormat,
+		&event.ImageWidth,
+		&event.ImageHeight,
+		&event.ImageUploadedAt,
+		&event.Status,
+		&event.CreatedAt,
+		&event.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("event with id %d not found", id)
+		}
+		return nil, fmt.Errorf("failed to get event: %w", err)
+	}
+
+	return event, nil
+}
+
+// Update updates an event
+func (r *EventRepository) Update(id int, req *models.EventUpdateRequest, organizerID int) (*models.Event, error) {
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	// First check if the event exists and belongs to the organizer
+	existingEvent, err := r.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if existingEvent.OrganizerID != organizerID {
+		return nil, fmt.Errorf("event does not belong to organizer")
+	}
+
+	// Check if event can be edited (not in the past)
+	if !existingEvent.CanBeEdited() {
+		return nil, fmt.Errorf("cannot edit event that has already started")
+	}
+
+	query := `
+		UPDATE events
+		SET title = $2, description = $3, start_date = $4, end_date = $5, location = $6, category_id = $7, image_url = $8, image_key = $9, image_size = $10, image_format = $11, image_width = $12, image_height = $13, image_uploaded_at = $14, status = $15, updated_at = $16
+		WHERE id = $1
+		RETURNING id, title, description, start_date, end_date, location, category_id, organizer_id, image_url, image_key, image_size, image_format, image_width, image_height, image_uploaded_at, status, created_at, updated_at`
+
+	event := &models.Event{}
+	now := time.Now()
+	
+	var imageUploadedAt *time.Time
+	if req.ImageKey != "" {
+		// If we're updating with a new image, set upload time to now
+		// If we're keeping existing image, we should preserve the original upload time
+		// For simplicity, we'll set it to now when there's an image key
+		imageUploadedAt = &now
+	}
+	
+	err = r.db.QueryRow(
+		query,
+		id,
+		req.Title,
+		req.Description,
+		req.StartDate,
+		req.EndDate,
+		req.Location,
+		req.CategoryID,
+		req.ImageURL,
+		req.ImageKey,
+		req.ImageSize,
+		req.ImageFormat,
+		req.ImageWidth,
+		req.ImageHeight,
+		imageUploadedAt,
+		req.Status,
+		now,
+	).Scan(
+		&event.ID,
+		&event.Title,
+		&event.Description,
+		&event.StartDate,
+		&event.EndDate,
+		&event.Location,
+		&event.CategoryID,
+		&event.OrganizerID,
+		&event.ImageURL,
+		&event.ImageKey,
+		&event.ImageSize,
+		&event.ImageFormat,
+		&event.ImageWidth,
+		&event.ImageHeight,
+		&event.ImageUploadedAt,
+		&event.Status,
+		&event.CreatedAt,
+		&event.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to update event: %w", err)
+	}
+
+	return event, nil
+}
+
+// Delete deletes an event by ID (only if it belongs to the organizer)
+func (r *EventRepository) Delete(id int, organizerID int) error {
+	// First check if the event exists and belongs to the organizer
+	existingEvent, err := r.GetByID(id)
+	if err != nil {
+		return err
+	}
+
+	if existingEvent.OrganizerID != organizerID {
+		return fmt.Errorf("event does not belong to organizer")
+	}
+
+	query := `DELETE FROM events WHERE id = $1`
+
+	result, err := r.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete event: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("event with id %d not found", id)
+	}
+
+	return nil
+}
+
+// GetByOrganizer retrieves events by organizer ID
+func (r *EventRepository) GetByOrganizer(organizerID int) ([]*models.Event, error) {
+	query := `
+		SELECT id, title, description, start_date, end_date, location, category_id, organizer_id, image_url, image_key, image_size, image_format, image_width, image_height, image_uploaded_at, status, created_at, updated_at
+		FROM events
+		WHERE organizer_id = $1
+		ORDER BY created_at DESC`
+
+	rows, err := r.db.Query(query, organizerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get events by organizer: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*models.Event
+	for rows.Next() {
+		event := &models.Event{}
+		err := rows.Scan(
+			&event.ID,
+			&event.Title,
+			&event.Description,
+			&event.StartDate,
+			&event.EndDate,
+			&event.Location,
+			&event.CategoryID,
+			&event.OrganizerID,
+			&event.ImageURL,
+			&event.ImageKey,
+			&event.ImageSize,
+			&event.ImageFormat,
+			&event.ImageWidth,
+			&event.ImageHeight,
+			&event.ImageUploadedAt,
+			&event.Status,
+			&event.CreatedAt,
+			&event.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan event: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating events: %w", err)
+	}
+
+	return events, nil
+}
+
+// Search searches for events with filters and pagination
+func (r *EventRepository) Search(filters EventSearchFilters) ([]*models.Event, int, error) {
+	// Build WHERE clause
+	var conditions []string
+	var args []interface{}
+	argIndex := 1
+
+	// Only show published events by default in search
+	if filters.Status == "" {
+		conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
+		args = append(args, models.StatusPublished)
+		argIndex++
+	} else {
+		conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
+		args = append(args, filters.Status)
+		argIndex++
+	}
+
+	// Text search in title and description
+	if filters.Query != "" {
+		conditions = append(conditions, fmt.Sprintf("(title ILIKE $%d OR description ILIKE $%d)", argIndex, argIndex))
+		args = append(args, "%"+filters.Query+"%")
+		argIndex++
+	}
+
+	// Category filter
+	if filters.CategoryID > 0 {
+		conditions = append(conditions, fmt.Sprintf("category_id = $%d", argIndex))
+		args = append(args, filters.CategoryID)
+		argIndex++
+	}
+
+	// Location filter
+	if filters.Location != "" {
+		conditions = append(conditions, fmt.Sprintf("location ILIKE $%d", argIndex))
+		args = append(args, "%"+filters.Location+"%")
+		argIndex++
+	}
+
+	// Date filters
+	if filters.DateFrom != nil {
+		conditions = append(conditions, fmt.Sprintf("start_date >= $%d", argIndex))
+		args = append(args, *filters.DateFrom)
+		argIndex++
+	}
+
+	if filters.DateTo != nil {
+		conditions = append(conditions, fmt.Sprintf("end_date <= $%d", argIndex))
+		args = append(args, *filters.DateTo)
+		argIndex++
+	}
+
+	// Price filters (need to join with ticket_types for price filtering)
+	var joinClause string
+	if filters.PriceMin != nil || filters.PriceMax != nil {
+		joinClause = "LEFT JOIN ticket_types tt ON events.id = tt.event_id"
+		
+		if filters.PriceMin != nil {
+			conditions = append(conditions, fmt.Sprintf("tt.price >= $%d", argIndex))
+			args = append(args, *filters.PriceMin)
+			argIndex++
+		}
+
+		if filters.PriceMax != nil {
+			conditions = append(conditions, fmt.Sprintf("tt.price <= $%d", argIndex))
+			args = append(args, *filters.PriceMax)
+			argIndex++
+		}
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	// Build ORDER BY clause
+	orderBy := "ORDER BY start_date ASC"
+	if filters.SortBy != "" {
+		direction := "ASC"
+		if filters.SortDesc {
+			direction = "DESC"
+		}
+
+		switch filters.SortBy {
+		case "created_at", "start_date", "title":
+			orderBy = fmt.Sprintf("ORDER BY %s %s", filters.SortBy, direction)
+		}
+	}
+
+	// Set default pagination
+	if filters.Limit <= 0 {
+		filters.Limit = 20
+	}
+	if filters.Offset < 0 {
+		filters.Offset = 0
+	}
+
+	// Build the base query
+	baseQuery := "FROM events"
+	if joinClause != "" {
+		baseQuery = fmt.Sprintf("FROM events %s", joinClause)
+	}
+
+	// Get total count
+	countQuery := fmt.Sprintf("SELECT COUNT(DISTINCT events.id) %s %s", baseQuery, whereClause)
+	var total int
+	err := r.db.QueryRow(countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get event count: %w", err)
+	}
+
+	// Get events
+	selectClause := "SELECT DISTINCT events.id, events.title, events.description, events.start_date, events.end_date, events.location, events.category_id, events.organizer_id, events.image_url, events.image_key, events.image_size, events.image_format, events.image_width, events.image_height, events.image_uploaded_at, events.status, events.created_at, events.updated_at"
+	query := fmt.Sprintf(`
+		%s
+		%s
+		%s
+		%s
+		LIMIT $%d OFFSET $%d`,
+		selectClause, baseQuery, whereClause, orderBy, argIndex, argIndex+1)
+
+	args = append(args, filters.Limit, filters.Offset)
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to search events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*models.Event
+	for rows.Next() {
+		event := &models.Event{}
+		err := rows.Scan(
+			&event.ID,
+			&event.Title,
+			&event.Description,
+			&event.StartDate,
+			&event.EndDate,
+			&event.Location,
+			&event.CategoryID,
+			&event.OrganizerID,
+			&event.ImageURL,
+			&event.ImageKey,
+			&event.ImageSize,
+			&event.ImageFormat,
+			&event.ImageWidth,
+			&event.ImageHeight,
+			&event.ImageUploadedAt,
+			&event.Status,
+			&event.CreatedAt,
+			&event.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan event: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating events: %w", err)
+	}
+
+	return events, total, nil
+}
+
+// GetPublishedEvents retrieves published events with pagination
+func (r *EventRepository) GetPublishedEvents(limit, offset int) ([]*models.Event, int, error) {
+	filters := EventSearchFilters{
+		Status: models.StatusPublished,
+		Limit:  limit,
+		Offset: offset,
+		SortBy: "start_date",
+	}
+
+	return r.Search(filters)
+}
+
+// GetUpcomingEvents retrieves upcoming published events
+func (r *EventRepository) GetUpcomingEvents(limit int) ([]*models.Event, error) {
+	now := time.Now()
+	filters := EventSearchFilters{
+		Status:   models.StatusPublished,
+		DateFrom: &now,
+		Limit:    limit,
+		SortBy:   "start_date",
+	}
+
+	events, _, err := r.Search(filters)
+	return events, err
+}
+
+// GetEventsByCategory retrieves events by category with pagination
+func (r *EventRepository) GetEventsByCategory(categoryID int, limit, offset int) ([]*models.Event, int, error) {
+	filters := EventSearchFilters{
+		Status:     models.StatusPublished,
+		CategoryID: categoryID,
+		Limit:      limit,
+		Offset:     offset,
+		SortBy:     "start_date",
+	}
+
+	return r.Search(filters)
+}
+
+// GetFeaturedEvents retrieves featured events (published, upcoming, limited)
+func (r *EventRepository) GetFeaturedEvents(limit int) ([]*models.Event, error) {
+	// For now, featured events are just upcoming events
+	// In the future, this could be based on a "featured" flag or popularity
+	return r.GetUpcomingEvents(limit)
+}
+
+// GetCategories retrieves all event categories
+func (r *EventRepository) GetCategories() ([]*models.Category, error) {
+	query := `
+		SELECT id, name, slug, COALESCE(description, '') as description, created_at
+		FROM categories
+		ORDER BY name ASC`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get categories: %w", err)
+	}
+	defer rows.Close()
+
+	var categories []*models.Category
+	for rows.Next() {
+		category := &models.Category{}
+		err := rows.Scan(
+			&category.ID,
+			&category.Name,
+			&category.Slug,
+			&category.Description,
+			&category.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan category: %w", err)
+		}
+		categories = append(categories, category)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating categories: %w", err)
+	}
+
+	return categories, nil
+}
+
+// Admin-specific methods
+
+// GetEventCount returns the total number of events
+func (r *EventRepository) GetEventCount() (int, error) {
+	var count int
+	err := r.db.QueryRow("SELECT COUNT(*) FROM events").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get event count: %w", err)
+	}
+	return count, nil
+}
+
+// GetPublishedEventCount returns the number of published events
+func (r *EventRepository) GetPublishedEventCount() (int, error) {
+	var count int
+	err := r.db.QueryRow("SELECT COUNT(*) FROM events WHERE status = 'published'").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get published event count: %w", err)
+	}
+	return count, nil
+}
+
+// Event Moderation Methods
+
+// GetPendingEvents retrieves events that are pending review
+func (r *EventRepository) GetPendingEvents(limit, offset int) ([]*models.Event, int, error) {
+	// Get total count
+	countQuery := "SELECT COUNT(*) FROM events WHERE status = 'pending_review'"
+	var totalCount int
+	err := r.db.QueryRow(countQuery).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get pending events count: %w", err)
+	}
+
+	// Get events
+	query := `
+		SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.location, 
+		       e.category_id, e.organizer_id, e.image_url, e.image_key, e.image_size, 
+		       e.image_format, e.image_width, e.image_height, e.image_uploaded_at, 
+		       e.status, e.reviewed_at, e.reviewed_by, e.rejection_reason, 
+		       e.created_at, e.updated_at,
+		       u.first_name, u.last_name, u.email,
+		       c.name as category_name
+		FROM events e
+		JOIN users u ON e.organizer_id = u.id
+		LEFT JOIN categories c ON e.category_id = c.id
+		WHERE e.status = 'pending_review'
+		ORDER BY e.created_at ASC
+		LIMIT $1 OFFSET $2`
+
+	rows, err := r.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to query pending events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*models.Event
+	for rows.Next() {
+		event := &models.Event{
+			Organizer: &models.User{},
+			Category:  &models.Category{},
+		}
+		var reviewedAt sql.NullTime
+		var reviewedBy sql.NullInt64
+
+		err := rows.Scan(
+			&event.ID,
+			&event.Title,
+			&event.Description,
+			&event.StartDate,
+			&event.EndDate,
+			&event.Location,
+			&event.CategoryID,
+			&event.OrganizerID,
+			&event.ImageURL,
+			&event.ImageKey,
+			&event.ImageSize,
+			&event.ImageFormat,
+			&event.ImageWidth,
+			&event.ImageHeight,
+			&event.ImageUploadedAt,
+			&event.Status,
+			&reviewedAt,
+			&reviewedBy,
+			&event.RejectionReason,
+			&event.CreatedAt,
+			&event.UpdatedAt,
+			&event.Organizer.FirstName,
+			&event.Organizer.LastName,
+			&event.Organizer.Email,
+			&event.Category.Name,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan event: %w", err)
+		}
+
+		if reviewedAt.Valid {
+			event.ReviewedAt = &reviewedAt.Time
+		}
+		if reviewedBy.Valid {
+			reviewedByInt := int(reviewedBy.Int64)
+			event.ReviewedBy = &reviewedByInt
+		}
+
+		events = append(events, event)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating events: %w", err)
+	}
+
+	return events, totalCount, nil
+}
+
+// ApproveEvent approves an event for publication
+func (r *EventRepository) ApproveEvent(eventID int, reviewerID int) error {
+	query := `
+		UPDATE events 
+		SET status = 'published', reviewed_at = $1, reviewed_by = $2, rejection_reason = '', updated_at = $3
+		WHERE id = $4 AND status = 'pending_review'`
+
+	now := time.Now()
+	result, err := r.db.Exec(query, now, reviewerID, now, eventID)
+	if err != nil {
+		return fmt.Errorf("failed to approve event: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("event not found or not in pending review status")
+	}
+
+	return nil
+}
+
+// RejectEvent rejects an event with a reason
+func (r *EventRepository) RejectEvent(eventID int, reviewerID int, reason string) error {
+	query := `
+		UPDATE events 
+		SET status = 'rejected', reviewed_at = $1, reviewed_by = $2, rejection_reason = $3, updated_at = $4
+		WHERE id = $5 AND status = 'pending_review'`
+
+	now := time.Now()
+	result, err := r.db.Exec(query, now, reviewerID, reason, now, eventID)
+	if err != nil {
+		return fmt.Errorf("failed to reject event: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("event not found or not in pending review status")
+	}
+
+	return nil
+}
+
+// SubmitForReview submits an event for admin review
+func (r *EventRepository) SubmitForReview(eventID int, organizerID int) error {
+	query := `
+		UPDATE events 
+		SET status = 'pending_review', updated_at = $1
+		WHERE id = $2 AND organizer_id = $3 AND status = 'draft'`
+
+	now := time.Now()
+	result, err := r.db.Exec(query, now, eventID, organizerID)
+	if err != nil {
+		return fmt.Errorf("failed to submit event for review: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("event not found, not owned by organizer, or not in draft status")
+	}
+
+	return nil
+}
+
+// GetEventModerationHistory retrieves the moderation history for an event
+func (r *EventRepository) GetEventModerationHistory(eventID int) (*models.Event, error) {
+	query := `
+		SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.location, 
+		       e.category_id, e.organizer_id, e.image_url, e.image_key, e.image_size, 
+		       e.image_format, e.image_width, e.image_height, e.image_uploaded_at, 
+		       e.status, e.reviewed_at, e.reviewed_by, e.rejection_reason, 
+		       e.created_at, e.updated_at,
+		       u.first_name, u.last_name, u.email,
+		       c.name as category_name,
+		       r.first_name as reviewer_first_name, r.last_name as reviewer_last_name, r.email as reviewer_email
+		FROM events e
+		JOIN users u ON e.organizer_id = u.id
+		LEFT JOIN categories c ON e.category_id = c.id
+		LEFT JOIN users r ON e.reviewed_by = r.id
+		WHERE e.id = $1`
+
+	event := &models.Event{
+		Organizer: &models.User{},
+		Category:  &models.Category{},
+		Reviewer:  &models.User{},
+	}
+	var reviewedAt sql.NullTime
+	var reviewedBy sql.NullInt64
+	var reviewerFirstName, reviewerLastName, reviewerEmail sql.NullString
+
+	err := r.db.QueryRow(query, eventID).Scan(
+		&event.ID,
+		&event.Title,
+		&event.Description,
+		&event.StartDate,
+		&event.EndDate,
+		&event.Location,
+		&event.CategoryID,
+		&event.OrganizerID,
+		&event.ImageURL,
+		&event.ImageKey,
+		&event.ImageSize,
+		&event.ImageFormat,
+		&event.ImageWidth,
+		&event.ImageHeight,
+		&event.ImageUploadedAt,
+		&event.Status,
+		&reviewedAt,
+		&reviewedBy,
+		&event.RejectionReason,
+		&event.CreatedAt,
+		&event.UpdatedAt,
+		&event.Organizer.FirstName,
+		&event.Organizer.LastName,
+		&event.Organizer.Email,
+		&event.Category.Name,
+		&reviewerFirstName,
+		&reviewerLastName,
+		&reviewerEmail,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("event not found")
+		}
+		return nil, fmt.Errorf("failed to get event moderation history: %w", err)
+	}
+
+	if reviewedAt.Valid {
+		event.ReviewedAt = &reviewedAt.Time
+	}
+	if reviewedBy.Valid {
+		reviewedByInt := int(reviewedBy.Int64)
+		event.ReviewedBy = &reviewedByInt
+		
+		if reviewerFirstName.Valid {
+			event.Reviewer.FirstName = reviewerFirstName.String
+		}
+		if reviewerLastName.Valid {
+			event.Reviewer.LastName = reviewerLastName.String
+		}
+		if reviewerEmail.Valid {
+			event.Reviewer.Email = reviewerEmail.String
+		}
+	}
+
+	return event, nil
+}
+
+// GetFeaturedEvents retrieves featured events (published events with good sales)
+func (r *EventRepository) GetFeaturedEvents(limit int) ([]*models.Event, error) {
+	query := `
+		SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.location, 
+		       e.category_id, e.organizer_id, e.image_url, e.image_key, e.image_size, 
+		       e.image_format, e.image_width, e.image_height, e.image_uploaded_at, 
+		       e.status, e.created_at, e.updated_at
+		FROM events e
+		WHERE e.status = 'published' 
+		  AND e.start_date > NOW()
+		ORDER BY e.created_at DESC
+		LIMIT $1`
+
+	rows, err := r.db.Query(query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get featured events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*models.Event
+	for rows.Next() {
+		event := &models.Event{}
+		err := rows.Scan(
+			&event.ID,
+			&event.Title,
+			&event.Description,
+			&event.StartDate,
+			&event.EndDate,
+			&event.Location,
+			&event.CategoryID,
+			&event.OrganizerID,
+			&event.ImageURL,
+			&event.ImageKey,
+			&event.ImageSize,
+			&event.ImageFormat,
+			&event.ImageWidth,
+			&event.ImageHeight,
+			&event.ImageUploadedAt,
+			&event.Status,
+			&event.CreatedAt,
+			&event.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan featured event: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating featured events: %w", err)
+	}
+
+	return events, nil
+}
+
+// GetUpcomingEvents retrieves upcoming published events
+func (r *EventRepository) GetUpcomingEvents(limit int) ([]*models.Event, error) {
+	query := `
+		SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.location, 
+		       e.category_id, e.organizer_id, e.image_url, e.image_key, e.image_size, 
+		       e.image_format, e.image_width, e.image_height, e.image_uploaded_at, 
+		       e.status, e.created_at, e.updated_at
+		FROM events e
+		WHERE e.status = 'published' 
+		  AND e.start_date > NOW()
+		ORDER BY e.start_date ASC
+		LIMIT $1`
+
+	rows, err := r.db.Query(query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get upcoming events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*models.Event
+	for rows.Next() {
+		event := &models.Event{}
+		err := rows.Scan(
+			&event.ID,
+			&event.Title,
+			&event.Description,
+			&event.StartDate,
+			&event.EndDate,
+			&event.Location,
+			&event.CategoryID,
+			&event.OrganizerID,
+			&event.ImageURL,
+			&event.ImageKey,
+			&event.ImageSize,
+			&event.ImageFormat,
+			&event.ImageWidth,
+			&event.ImageHeight,
+			&event.ImageUploadedAt,
+			&event.Status,
+			&event.CreatedAt,
+			&event.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan upcoming event: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating upcoming events: %w", err)
+	}
+
+	return events, nil
+}
+
+// GetPublishedEvents retrieves published events with pagination
+func (r *EventRepository) GetPublishedEvents(limit, offset int) ([]*models.Event, int, error) {
+	// Get total count
+	countQuery := "SELECT COUNT(*) FROM events WHERE status = 'published'"
+	var totalCount int
+	err := r.db.QueryRow(countQuery).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get published events count: %w", err)
+	}
+
+	// Get events
+	query := `
+		SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.location, 
+		       e.category_id, e.organizer_id, e.image_url, e.image_key, e.image_size, 
+		       e.image_format, e.image_width, e.image_height, e.image_uploaded_at, 
+		       e.status, e.created_at, e.updated_at
+		FROM events e
+		WHERE e.status = 'published'
+		ORDER BY e.start_date ASC
+		LIMIT $1 OFFSET $2`
+
+	rows, err := r.db.Query(query, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get published events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*models.Event
+	for rows.Next() {
+		event := &models.Event{}
+		err := rows.Scan(
+			&event.ID,
+			&event.Title,
+			&event.Description,
+			&event.StartDate,
+			&event.EndDate,
+			&event.Location,
+			&event.CategoryID,
+			&event.OrganizerID,
+			&event.ImageURL,
+			&event.ImageKey,
+			&event.ImageSize,
+			&event.ImageFormat,
+			&event.ImageWidth,
+			&event.ImageHeight,
+			&event.ImageUploadedAt,
+			&event.Status,
+			&event.CreatedAt,
+			&event.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan published event: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating published events: %w", err)
+	}
+
+	return events, totalCount, nil
+}
+
+// GetEventsByCategory retrieves events by category with pagination
+func (r *EventRepository) GetEventsByCategory(categoryID int, limit, offset int) ([]*models.Event, int, error) {
+	// Get total count
+	countQuery := "SELECT COUNT(*) FROM events WHERE category_id = $1 AND status = 'published'"
+	var totalCount int
+	err := r.db.QueryRow(countQuery, categoryID).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get events by category count: %w", err)
+	}
+
+	// Get events
+	query := `
+		SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.location, 
+		       e.category_id, e.organizer_id, e.image_url, e.image_key, e.image_size, 
+		       e.image_format, e.image_width, e.image_height, e.image_uploaded_at, 
+		       e.status, e.created_at, e.updated_at
+		FROM events e
+		WHERE e.category_id = $1 AND e.status = 'published'
+		ORDER BY e.start_date ASC
+		LIMIT $2 OFFSET $3`
+
+	rows, err := r.db.Query(query, categoryID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get events by category: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*models.Event
+	for rows.Next() {
+		event := &models.Event{}
+		err := rows.Scan(
+			&event.ID,
+			&event.Title,
+			&event.Description,
+			&event.StartDate,
+			&event.EndDate,
+			&event.Location,
+			&event.CategoryID,
+			&event.OrganizerID,
+			&event.ImageURL,
+			&event.ImageKey,
+			&event.ImageSize,
+			&event.ImageFormat,
+			&event.ImageWidth,
+			&event.ImageHeight,
+			&event.ImageUploadedAt,
+			&event.Status,
+			&event.CreatedAt,
+			&event.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan event by category: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating events by category: %w", err)
+	}
+
+	return events, totalCount, nil
+}

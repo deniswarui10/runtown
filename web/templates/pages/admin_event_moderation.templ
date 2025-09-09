@@ -1,0 +1,300 @@
+package pages
+
+import (
+	"fmt"
+	"event-ticketing-platform/internal/models"
+	"event-ticketing-platform/web/templates/layouts"
+)
+
+// AdminEventModerationPage renders the admin event moderation page
+templ AdminEventModerationPage(user *models.User, events []*models.Event, pagination map[string]interface{}) {
+	@layouts.BaseLayout("Event Moderation - Event Ticketing Platform", user) {
+		<div class="min-h-screen bg-gray-50 py-8">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<!-- Header -->
+				<div class="mb-8">
+					<div class="flex items-center justify-between">
+						<div>
+							<h1 class="text-3xl font-bold text-gray-900">Event Moderation</h1>
+							<p class="mt-2 text-gray-600">Review and moderate event submissions</p>
+						</div>
+						<div class="flex items-center space-x-4">
+							<div class="text-sm text-gray-500">
+								{ fmt.Sprintf("%d", pagination["TotalCount"]) } events pending review
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Events List -->
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+					if len(events) == 0 {
+						<div class="p-6 text-center">
+							<svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+							</svg>
+							<h3 class="mt-2 text-sm font-medium text-gray-900">No events pending review</h3>
+							<p class="mt-1 text-sm text-gray-500">All events have been reviewed.</p>
+						</div>
+					} else {
+						<div class="divide-y divide-gray-200">
+							for _, event := range events {
+								<div class="p-6">
+									<div class="flex items-start justify-between">
+										<div class="flex-1">
+											<div class="flex items-center space-x-3">
+												<h3 class="text-lg font-medium text-gray-900">{ event.Title }</h3>
+												<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+													Pending Review
+												</span>
+											</div>
+											<div class="mt-2 text-sm text-gray-600">
+												<p>{ event.Description }</p>
+											</div>
+											<div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-500">
+												<div>
+													<span class="font-medium">Organizer:</span>
+													{ event.Organizer.FirstName } { event.Organizer.LastName }
+													<br/>
+													<span class="text-xs">{ event.Organizer.Email }</span>
+												</div>
+												<div>
+													<span class="font-medium">Date:</span>
+													{ event.StartDate.Format("Jan 2, 2006 15:04") }
+													<br/>
+													<span class="font-medium">Location:</span>
+													{ event.Location }
+												</div>
+												<div>
+													<span class="font-medium">Category:</span>
+													if event.Category != nil {
+														{ event.Category.Name }
+													} else {
+														N/A
+													}
+													<br/>
+													<span class="font-medium">Submitted:</span>
+													{ event.CreatedAt.Format("Jan 2, 2006") }
+												</div>
+											</div>
+											if event.ImageURL != "" {
+												<div class="mt-4">
+													<img src={ event.ImageURL } alt={ event.Title } class="h-32 w-48 object-cover rounded-lg"/>
+												</div>
+											}
+										</div>
+										<div class="ml-6 flex flex-col space-y-2">
+											<button 
+												type="button"
+												class="view-event-btn inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+												data-event-id={ fmt.Sprintf("%d", event.ID) }
+											>
+												<svg class="mr-2 -ml-0.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+												</svg>
+												View Details
+											</button>
+											<button 
+												type="button"
+												class="approve-event-btn inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+												data-event-id={ fmt.Sprintf("%d", event.ID) }
+											>
+												<svg class="mr-2 -ml-0.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+												</svg>
+												Approve
+											</button>
+											<button 
+												type="button"
+												class="reject-event-btn inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+												data-event-id={ fmt.Sprintf("%d", event.ID) }
+											>
+												<svg class="mr-2 -ml-0.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+												</svg>
+												Reject
+											</button>
+										</div>
+									</div>
+								</div>
+							}
+						</div>
+					}
+				</div>
+
+				<!-- Pagination -->
+				if pagination["TotalPages"].(int) > 1 {
+					<div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-6 rounded-lg shadow-sm border border-gray-200">
+						<div class="flex-1 flex justify-between sm:hidden">
+							if pagination["HasPrev"].(bool) {
+								<a href={ templ.URL(fmt.Sprintf("?page=%d", pagination["PrevPage"])) } class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+									Previous
+								</a>
+							}
+							if pagination["HasNext"].(bool) {
+								<a href={ templ.URL(fmt.Sprintf("?page=%d", pagination["NextPage"])) } class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+									Next
+								</a>
+							}
+						</div>
+						<div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+							<div>
+								<p class="text-sm text-gray-700">
+									Showing page { fmt.Sprintf("%d", pagination["CurrentPage"]) } of { fmt.Sprintf("%d", pagination["TotalPages"]) }
+								</p>
+							</div>
+							<div>
+								<nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+									if pagination["HasPrev"].(bool) {
+										<a href={ templ.URL(fmt.Sprintf("?page=%d", pagination["PrevPage"])) } class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+											<span class="sr-only">Previous</span>
+											<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+											</svg>
+										</a>
+									}
+									
+									<span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+										{ fmt.Sprintf("%d", pagination["CurrentPage"]) }
+									</span>
+									
+									if pagination["HasNext"].(bool) {
+										<a href={ templ.URL(fmt.Sprintf("?page=%d", pagination["NextPage"])) } class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+											<span class="sr-only">Next</span>
+											<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+											</svg>
+										</a>
+									}
+								</nav>
+							</div>
+						</div>
+					</div>
+				}
+			</div>
+		</div>
+
+		<!-- Event Details Modal -->
+		<div id="eventModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+			<div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+				<div class="mt-3">
+					<div class="flex items-center justify-between mb-4">
+						<h3 class="text-lg font-medium text-gray-900">Event Details</h3>
+						<button onclick="closeEventModal()" class="text-gray-400 hover:text-gray-600">
+							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+							</svg>
+						</button>
+					</div>
+					<div id="eventDetails">
+						<!-- Details will be loaded here -->
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Rejection Modal -->
+		<div id="rejectionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+			<div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+				<div class="mt-3">
+					<div class="flex items-center justify-between mb-4">
+						<h3 class="text-lg font-medium text-gray-900">Reject Event</h3>
+						<button onclick="closeRejectionModal()" class="text-gray-400 hover:text-gray-600">
+							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+							</svg>
+						</button>
+					</div>
+					<form id="rejectionForm" method="POST">
+						<input type="hidden" name="csrf_token" value={ getCSRFToken(ctx) }/>
+						<input type="hidden" name="action" value="reject"/>
+						
+						<div class="mb-4">
+							<label for="rejection_reason" class="block text-sm font-medium text-gray-700 mb-2">Rejection Reason</label>
+							<textarea name="rejection_reason" id="rejection_reason" rows="4" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Please provide a reason for rejecting this event..." required></textarea>
+						</div>
+						
+						<div class="flex justify-end space-x-4">
+							<button type="button" onclick="closeRejectionModal()" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+								Cancel
+							</button>
+							<button type="submit" class="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700">
+								Reject Event
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				// Handle view event buttons
+				document.querySelectorAll('.view-event-btn').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						const eventId = this.getAttribute('data-event-id');
+						viewEventDetails(eventId);
+					});
+				});
+
+				// Handle approve event buttons
+				document.querySelectorAll('.approve-event-btn').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						const eventId = this.getAttribute('data-event-id');
+						approveEvent(eventId);
+					});
+				});
+
+				// Handle reject event buttons
+				document.querySelectorAll('.reject-event-btn').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						const eventId = this.getAttribute('data-event-id');
+						rejectEvent(eventId);
+					});
+				});
+			});
+
+			function viewEventDetails(eventId) {
+				// This would fetch event details via HTMX or fetch API
+				document.getElementById('eventModal').classList.remove('hidden');
+			}
+
+			function closeEventModal() {
+				document.getElementById('eventModal').classList.add('hidden');
+			}
+
+			function approveEvent(eventId) {
+				if (confirm('Are you sure you want to approve this event?')) {
+					const form = document.createElement('form');
+					form.method = 'POST';
+					form.action = '/admin/events/' + eventId + '/moderate';
+					
+					const csrfToken = document.createElement('input');
+					csrfToken.type = 'hidden';
+					csrfToken.name = 'csrf_token';
+					csrfToken.value = document.querySelector('input[name="csrf_token"]').value;
+					
+					const action = document.createElement('input');
+					action.type = 'hidden';
+					action.name = 'action';
+					action.value = 'approve';
+					
+					form.appendChild(csrfToken);
+					form.appendChild(action);
+					document.body.appendChild(form);
+					form.submit();
+				}
+			}
+
+			function rejectEvent(eventId) {
+				document.getElementById('rejectionForm').action = '/admin/events/' + eventId + '/moderate';
+				document.getElementById('rejectionModal').classList.remove('hidden');
+			}
+
+			function closeRejectionModal() {
+				document.getElementById('rejectionModal').classList.add('hidden');
+			}
+		</script>
+	}
+}

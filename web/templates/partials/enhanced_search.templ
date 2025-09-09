@@ -1,0 +1,72 @@
+package partials
+
+import (
+	"event-ticketing-platform/internal/models"
+	"fmt"
+)
+
+// EnhancedSearchResults renders enhanced search results with suggestions
+templ EnhancedSearchResults(events []*models.Event, query string, suggestions []string) {
+	<div class="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 z-50">
+		if len(suggestions) > 0 {
+			<div class="p-3 border-b border-gray-100">
+				<p class="text-xs text-gray-500 mb-2">Suggestions:</p>
+				<div class="flex flex-wrap gap-1">
+					for _, suggestion := range suggestions {
+						<button 
+							class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+							onclick={ templ.ComponentScript{Call: fmt.Sprintf("document.querySelector('input[name=\"q\"]').value = '%s'; document.querySelector('form').submit();", suggestion)} }
+						>
+							{ suggestion }
+						</button>
+					}
+				</div>
+			</div>
+		}
+		
+		if len(events) > 0 {
+			<div class="max-h-96 overflow-y-auto">
+				for _, event := range events {
+					<a 
+						href={ templ.URL(fmt.Sprintf("/events/%d", event.ID)) }
+						class="block p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+					>
+						<div class="flex items-center space-x-3">
+							<div class="flex-shrink-0">
+								if event.ImageURL != "" {
+									<img src={ event.ImageURL } alt={ event.Title } class="w-10 h-10 rounded object-cover"/>
+								} else {
+									<div class="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+										<svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+										</svg>
+									</div>
+								}
+							</div>
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium text-gray-900 truncate">{ event.Title }</p>
+								<p class="text-xs text-gray-500">{ event.StartDate.Format("Jan 2, 2006") } • { event.Location }</p>
+							</div>
+							<div class="flex-shrink-0">
+								<span class="text-sm font-medium text-gray-900">From KSh 100.00</span>
+							</div>
+						</div>
+					</a>
+				}
+			</div>
+			<div class="p-3 bg-gray-50 border-t border-gray-100">
+				<a 
+					href={ templ.URL(fmt.Sprintf("/events?q=%s", query)) }
+					class="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
+				>
+					View all results for "{ query }"
+				</a>
+			</div>
+		} else if query != "" {
+			<div class="p-4 text-center">
+				<p class="text-sm text-gray-500">No events found for "{ query }"</p>
+				<a href="/events" class="text-sm text-indigo-600 hover:text-indigo-500">Browse all events</a>
+			</div>
+		}
+	</div>
+}

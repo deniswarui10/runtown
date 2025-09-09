@@ -1,56 +1,59 @@
 package main
 
 import (
-	"database/sql"
+	"flag"
+	"fmt"
 	"log"
 	"os"
 
-	"github.com/golang-migrate/migrate"
-	"github.com/golang-migrate/migrate/database/sqlite3"
-	"github.com/golang-migrate/migrate/source/file"
+	"event-ticketing-platform/internal/config"
+	"event-ticketing-platform/internal/database"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("Please provide a migration direction: 'up' or 'down'")
-	}
+	var (
+		statusFlag = flag.Bool("status", false, "Show migration status")
+		upFlag     = flag.Bool("up", false, "Run pending migrations")
+	)
+	flag.Parse()
 
-	direction := os.Args[1]
-
-	db, err := sql.Open("sqlite3", "./data.db")
+	// Load configuration
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Connect to database
+	dbConfig := database.Config{
+		URL:      cfg.Database.URL,
+		Host:     cfg.Database.Host,
+		Port:     cfg.Database.Port,
+		User:     cfg.Database.User,
+		Password: cfg.Database.Password,
+		DBName:   cfg.Database.DBName,
+		SSLMode:  cfg.Database.SSLMode,
+	}
+
+	db, err := database.NewConnection(dbConfig)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
 	defer db.Close()
 
-	instance, err := sqlite3.WithInstance(db, &sqlite3.Config{})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fSrc, err := (&file.File{}).Open("cmd/migrate/migrations")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	m, err := migrate.NewWithInstance("file", fSrc, "sqlite3", instance)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	switch direction {
-	case "up":
-		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-			log.Fatal(err)
+	switch {
+	case *statusFlag:
+		if err := db.GetMigrationStatus(); err != nil {
+			log.Fatalf("Failed to get migration status: %v", err)
 		}
-	case "down":
-		if err := m.Down(); err != nil && err != migrate.ErrNoChange {
-			log.Fatal(err)
+	case *upFlag:
+		if err := db.RunMigrations(); err != nil {
+			log.Fatalf("Failed to run migrations: %v", err)
 		}
+		fmt.Println("All migrations completed successfully!")
 	default:
-		log.Fatal("Invalid direction. Use 'up' or 'down'")
+		fmt.Println("Usage:")
+		fmt.Println("  go run cmd/migrate/main.go -status   # Show migration status")
+		fmt.Println("  go run cmd/migrate/main.go -up       # Run pending migrations")
+		os.Exit(1)
 	}
 }

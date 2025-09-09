@@ -1,0 +1,440 @@
+package pages
+
+import (
+	"event-ticketing-platform/internal/models"
+	"event-ticketing-platform/internal/services"
+	"event-ticketing-platform/web/templates/components"
+	"event-ticketing-platform/web/templates/layouts"
+	"fmt"
+	"strconv"
+)
+
+// EnhancedEventFilters represents enhanced filtering options
+type EnhancedEventFilters struct {
+	Query        string `json:"query"`
+	Category     string `json:"category"`
+	Location     string `json:"location"`
+	DateFrom     string `json:"date_from"`
+	DateTo       string `json:"date_to"`
+	PriceMin     int    `json:"price_min"`
+	PriceMax     int    `json:"price_max"`
+	EventType    string `json:"event_type"`
+	SortBy       string `json:"sort_by"`
+	SortOrder    string `json:"sort_order"`
+	Availability string `json:"availability"`
+}
+
+// EnhancedEventsListPage renders the enhanced events listing page
+templ EnhancedEventsListPage(user *models.User, result *services.DiscoveryResult, filters EnhancedEventFilters, pagination components.Pagination, recommendations []*models.Event, trending []*models.Event) {
+	@layouts.BaseLayout("Discover Events - EventHub", user) {
+		<div class="min-h-screen bg-gray-50">
+			<!-- Hero Section with Search -->
+			<div class="bg-gradient-to-r from-indigo-600 to-purple-700 text-white py-16">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div class="text-center">
+						<h1 class="text-4xl font-bold mb-4">Discover Amazing Events</h1>
+						<p class="text-xl mb-8">Find events that match your interests and connect with your community</p>
+						
+						<!-- Enhanced Search Bar -->
+						<div class="max-w-2xl mx-auto">
+							<div class="relative">
+								<input 
+									type="text" 
+									name="q" 
+									value={ filters.Query }
+									placeholder="Search events, categories, locations..."
+									class="w-full px-6 py-4 text-lg rounded-full border-0 focus:ring-4 focus:ring-white/20 text-gray-900"
+									hx-get="/search/events"
+									hx-trigger="keyup changed delay:300ms"
+									hx-target="#search-suggestions"
+									hx-indicator="#search-loading"
+								/>
+								<div class="absolute right-4 top-1/2 transform -translate-y-1/2">
+									<svg id="search-loading" class="animate-spin h-5 w-5 text-gray-400 htmx-indicator" fill="none" viewBox="0 0 24 24">
+										<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+										<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+									</svg>
+									<svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+									</svg>
+								</div>
+							</div>
+							<div id="search-suggestions" class="mt-2"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+				<div class="flex flex-col lg:flex-row gap-8">
+					<!-- Filters Sidebar -->
+					<div class="lg:w-1/4">
+						@EnhancedFiltersPanel(filters, result.Categories, result.Locations, result.PriceRange, result.Facets)
+					</div>
+
+					<!-- Main Content -->
+					<div class="lg:w-3/4">
+						<!-- Results Header -->
+						<div class="flex justify-between items-center mb-6">
+							<div>
+								<h2 class="text-2xl font-bold text-gray-900">
+									if filters.Query != "" {
+										Search Results for "{ filters.Query }"
+									} else {
+										All Events
+									}
+								</h2>
+								<p class="text-gray-600">
+									Showing { fmt.Sprintf("%d", len(result.Events)) } of { fmt.Sprintf("%d", result.FilteredCount) } events
+								</p>
+							</div>
+							
+							<!-- Sort Options -->
+							<div class="flex items-center space-x-4">
+								<label class="text-sm font-medium text-gray-700">Sort by:</label>
+								<select 
+									name="sort_by" 
+									class="border-gray-300 rounded-md text-sm"
+									hx-get="/events"
+									hx-trigger="change"
+									hx-target="#events-container"
+									hx-include="[name='category'], [name='location'], [name='date_from'], [name='date_to'], [name='price_min'], [name='price_max'], [name='event_type'], [name='availability']"
+								>
+									<option value="date" if filters.SortBy == "date" { selected }>Date</option>
+									<option value="price" if filters.SortBy == "price" { selected }>Price</option>
+									<option value="popularity" if filters.SortBy == "popularity" { selected }>Popularity</option>
+									<option value="relevance" if filters.SortBy == "relevance" { selected }>Relevance</option>
+								</select>
+							</div>
+						</div>
+
+						<!-- Events Grid -->
+						<div id="events-container">
+							@EnhancedEventsList(result.Events, pagination, result.Suggestions, result.Facets)
+						</div>
+
+						<!-- Recommendations Section -->
+						if user != nil && len(recommendations) > 0 {
+							<div class="mt-12">
+								<h3 class="text-xl font-bold text-gray-900 mb-6">Recommended for You</h3>
+								<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+									for _, event := range recommendations {
+										@EventCard(event, true)
+									}
+								</div>
+							</div>
+						}
+
+						<!-- Trending Section -->
+						if len(trending) > 0 {
+							<div class="mt-12">
+								<h3 class="text-xl font-bold text-gray-900 mb-6">Trending Events</h3>
+								<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+									for _, event := range trending {
+										@EventCard(event, false)
+									}
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// EnhancedEventsList renders the events list with enhanced features
+templ EnhancedEventsList(events []*models.Event, pagination components.Pagination, suggestions []string, facets map[string][]services.Facet) {
+	<div class="space-y-6">
+		<!-- Search Suggestions -->
+		if len(suggestions) > 0 {
+			<div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+				<p class="text-sm text-blue-700 mb-2">Did you mean:</p>
+				<div class="flex flex-wrap gap-2">
+					for _, suggestion := range suggestions {
+						<button 
+							class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200"
+							hx-get="/events"
+							hx-vals={ fmt.Sprintf(`{"q": "%s"}`, suggestion) }
+							hx-target="#events-container"
+						>
+							{ suggestion }
+						</button>
+					}
+				</div>
+			</div>
+		}
+
+		<!-- Events Grid -->
+		if len(events) > 0 {
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				for _, event := range events {
+					@EnhancedEventCard(event)
+				}
+			</div>
+
+			<!-- Pagination -->
+			if pagination.TotalPages > 1 {
+				<div class="mt-8">
+					@components.PaginationComponent(pagination)
+				</div>
+			}
+		} else {
+			<!-- No Results -->
+			<div class="text-center py-12">
+				<svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+				</svg>
+				<h3 class="text-lg font-medium text-gray-900 mb-2">No events found</h3>
+				<p class="text-gray-600 mb-6">Try adjusting your search criteria or browse all events.</p>
+				<a href="/events" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+					Browse All Events
+				</a>
+			</div>
+		}
+	</div>
+}
+
+// EnhancedFiltersPanel renders the enhanced filters sidebar
+templ EnhancedFiltersPanel(filters EnhancedEventFilters, categories []*models.Category, locations []string, priceRange services.PriceRange, facets map[string][]services.Facet) {
+	<div class="bg-white rounded-lg shadow-lg p-6 sticky top-4">
+		<h3 class="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+		
+		<form 
+			hx-get="/events"
+			hx-target="#events-container"
+			hx-trigger="change, submit"
+			hx-indicator="#filter-loading"
+			class="space-y-6"
+		>
+			<!-- Loading Indicator -->
+			<div id="filter-loading" class="htmx-indicator">
+				<div class="flex items-center justify-center py-4">
+					<svg class="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+					</svg>
+					<span class="ml-2 text-sm text-gray-600">Updating results...</span>
+				</div>
+			</div>
+
+			<!-- Category Filter -->
+			<div>
+				<label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+				<select name="category" class="w-full border-gray-300 rounded-md">
+					<option value="">All Categories</option>
+					for _, category := range categories {
+						<option value={ category.Name } if filters.Category == category.Name { selected }>
+							{ category.Name }
+						</option>
+					}
+				</select>
+			</div>
+
+			<!-- Location Filter -->
+			<div>
+				<label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+				<select name="location" class="w-full border-gray-300 rounded-md">
+					<option value="">All Locations</option>
+					for _, location := range locations {
+						<option value={ location } if filters.Location == location { selected }>
+							{ location }
+						</option>
+					}
+				</select>
+			</div>
+
+			<!-- Date Range Filter -->
+			<div>
+				<label class="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+				<div class="space-y-2">
+					<input 
+						type="date" 
+						name="date_from" 
+						value={ filters.DateFrom }
+						class="w-full border-gray-300 rounded-md"
+						placeholder="From"
+					/>
+					<input 
+						type="date" 
+						name="date_to" 
+						value={ filters.DateTo }
+						class="w-full border-gray-300 rounded-md"
+						placeholder="To"
+					/>
+				</div>
+			</div>
+
+			<!-- Price Range Filter -->
+			<div>
+				<label class="block text-sm font-medium text-gray-700 mb-2">Price Range (KES)</label>
+				<div class="space-y-2">
+					<input 
+						type="number" 
+						name="price_min" 
+						value={ strconv.Itoa(filters.PriceMin) }
+						min="0"
+						class="w-full border-gray-300 rounded-md"
+						placeholder="Min price"
+					/>
+					<input 
+						type="number" 
+						name="price_max" 
+						value={ strconv.Itoa(filters.PriceMax) }
+						min="0"
+						class="w-full border-gray-300 rounded-md"
+						placeholder="Max price"
+					/>
+				</div>
+				if priceRange.Min > 0 || priceRange.Max > 0 {
+					<p class="text-xs text-gray-500 mt-1">
+						Range: KES { fmt.Sprintf("%.2f", float64(priceRange.Min)/100) } - KES { fmt.Sprintf("%.2f", float64(priceRange.Max)/100) }
+					</p>
+				}
+			</div>
+
+			<!-- Event Type Filter -->
+			<div>
+				<label class="block text-sm font-medium text-gray-700 mb-2">Event Type</label>
+				<select name="event_type" class="w-full border-gray-300 rounded-md">
+					<option value="">All Types</option>
+					<option value="online" if filters.EventType == "online" { selected }>Online</option>
+					<option value="offline" if filters.EventType == "offline" { selected }>In-Person</option>
+					<option value="hybrid" if filters.EventType == "hybrid" { selected }>Hybrid</option>
+				</select>
+			</div>
+
+			<!-- Availability Filter -->
+			<div>
+				<label class="block text-sm font-medium text-gray-700 mb-2">Availability</label>
+				<select name="availability" class="w-full border-gray-300 rounded-md">
+					<option value="">All Events</option>
+					<option value="available" if filters.Availability == "available" { selected }>Available</option>
+					<option value="sold_out" if filters.Availability == "sold_out" { selected }>Sold Out</option>
+				</select>
+			</div>
+
+			<!-- Clear Filters -->
+			<div class="pt-4 border-t border-gray-200">
+				<a 
+					href="/events" 
+					class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+				>
+					Clear All Filters
+				</a>
+			</div>
+		</form>
+	</div>
+}
+
+// EnhancedEventCard renders an enhanced event card with quick actions
+templ EnhancedEventCard(event *models.Event) {
+	<div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+		<!-- Event Image -->
+		<div class="relative h-48 bg-gray-200">
+			if event.ImageURL != "" {
+				<img src={ event.ImageURL } alt={ event.Title } class="w-full h-full object-cover"/>
+			} else {
+				<div class="w-full h-full flex items-center justify-center">
+					<svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+					</svg>
+				</div>
+			}
+			
+			<!-- Quick Actions Overlay -->
+			<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+				<div class="flex space-x-2">
+					<button class="p-2 bg-white/90 rounded-full hover:bg-white shadow-lg">
+						<svg class="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+						</svg>
+					</button>
+					<button class="p-2 bg-white/90 rounded-full hover:bg-white shadow-lg">
+						<svg class="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+						</svg>
+					</button>
+				</div>
+			</div>
+
+			<!-- Event Status Badge -->
+			<div class="absolute top-2 left-2">
+				<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+					Available
+				</span>
+			</div>
+		</div>
+
+		<!-- Event Details -->
+		<div class="p-6">
+			<div class="flex items-start justify-between mb-2">
+				<h3 class="text-lg font-semibold text-gray-900 line-clamp-2">
+					<a href={ templ.URL(fmt.Sprintf("/events/%d", event.ID)) } class="hover:text-indigo-600">
+						{ event.Title }
+					</a>
+				</h3>
+			</div>
+
+			<p class="text-gray-600 text-sm mb-4 line-clamp-2">{ event.Description }</p>
+
+			<!-- Event Meta -->
+			<div class="space-y-2 mb-4">
+				<div class="flex items-center text-sm text-gray-500">
+					<svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+					</svg>
+					{ event.StartDate.Format("Jan 2, 2006 at 3:04 PM") }
+				</div>
+				<div class="flex items-center text-sm text-gray-500">
+					<svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+					</svg>
+					{ event.Location }
+				</div>
+			</div>
+
+			<!-- Price and CTA -->
+			<div class="flex items-center justify-between">
+				<div>
+					<span class="text-lg font-bold text-gray-900">From KES 10.00</span>
+					<span class="text-sm text-gray-500 ml-1">per ticket</span>
+				</div>
+				<a 
+					href={ templ.URL(fmt.Sprintf("/events/%d", event.ID)) }
+					class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+				>
+					View Details
+				</a>
+			</div>
+		</div>
+	</div>
+}
+
+// EventCard renders a simple event card (for recommendations/trending)
+templ EventCard(event *models.Event, isRecommended bool) {
+	<div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+		<div class="relative h-32 bg-gray-200">
+			if event.ImageURL != "" {
+				<img src={ event.ImageURL } alt={ event.Title } class="w-full h-full object-cover"/>
+			}
+			if isRecommended {
+				<div class="absolute top-2 left-2">
+					<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+						Recommended
+					</span>
+				</div>
+			}
+		</div>
+		<div class="p-4">
+			<h4 class="font-semibold text-gray-900 mb-1 line-clamp-1">
+				<a href={ templ.URL(fmt.Sprintf("/events/%d", event.ID)) } class="hover:text-indigo-600">
+					{ event.Title }
+				</a>
+			</h4>
+			<p class="text-sm text-gray-600 mb-2">{ event.StartDate.Format("Jan 2, 2006") }</p>
+			<p class="text-sm font-medium text-gray-900">From KES 10.00</p>
+		</div>
+	</div>
+}

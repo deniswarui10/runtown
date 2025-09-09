@@ -1,0 +1,129 @@
+package pages
+
+import (
+	"event-ticketing-platform/internal/models"
+	"event-ticketing-platform/web/templates/layouts"
+)
+
+// AdminCreateCategory renders the category creation form
+templ AdminCreateCategory(user *models.User, formData map[string]interface{}, errors map[string]string) {
+	@layouts.BaseLayout("Create Category - Admin - Event Ticketing Platform", user) {
+		<div class="min-h-screen bg-gray-50 py-8">
+			<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+				<!-- Header -->
+				<div class="mb-8">
+					<div class="flex items-center justify-between">
+						<div>
+							<h1 class="text-3xl font-bold text-gray-900">Create Category</h1>
+							<p class="mt-2 text-gray-600">Add a new event category</p>
+						</div>
+						<a href="/admin/categories" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+							<svg class="mr-2 -ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
+							</svg>
+							Back to Categories
+						</a>
+					</div>
+				</div>
+
+				<!-- Form -->
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200">
+					<form method="POST" action="/admin/categories" class="p-6 space-y-6">
+						<!-- CSRF Token -->
+						<input type="hidden" name="csrf_token" value={ getCSRFToken(ctx) }/>
+						
+						<!-- General Error -->
+						if errors != nil && errors["general"] != "" {
+							<div class="bg-red-50 border border-red-200 rounded-md p-4">
+								<div class="flex">
+									<div class="flex-shrink-0">
+										<svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+											<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+										</svg>
+									</div>
+									<div class="ml-3">
+										<h3 class="text-sm font-medium text-red-800">Error</h3>
+										<div class="mt-2 text-sm text-red-700">
+											<p>{ errors["general"] }</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						}
+
+						<!-- Category Name -->
+						<div>
+							<label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+								Category Name <span class="text-red-500">*</span>
+							</label>
+							<input 
+								type="text" 
+								name="name" 
+								id="name" 
+								value={ getStringValue(formData, "name") }
+								class={ "block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm",
+									templ.KV("border-red-300 focus:border-red-500 focus:ring-red-500", errors != nil && errors["name"] != "") }
+								placeholder="e.g., Music, Technology, Sports"
+								required
+							/>
+							if errors != nil && errors["name"] != "" {
+								<p class="mt-2 text-sm text-red-600">{ errors["name"] }</p>
+							}
+						</div>
+
+						<!-- Category Slug -->
+						<div>
+							<label for="slug" class="block text-sm font-medium text-gray-700 mb-2">
+								URL Slug <span class="text-red-500">*</span>
+							</label>
+							<input 
+								type="text" 
+								name="slug" 
+								id="slug" 
+								value={ getStringValue(formData, "slug") }
+								class={ "block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm",
+									templ.KV("border-red-300 focus:border-red-500 focus:ring-red-500", errors != nil && errors["slug"] != "") }
+								placeholder="e.g., music, technology, sports"
+								pattern="[a-z0-9-]+"
+								required
+							/>
+							<p class="mt-1 text-sm text-gray-500">
+								Used in URLs. Only lowercase letters, numbers, and hyphens allowed.
+							</p>
+							if errors != nil && errors["slug"] != "" {
+								<p class="mt-2 text-sm text-red-600">{ errors["slug"] }</p>
+							}
+						</div>
+
+						<!-- Category Description -->
+						<div>
+							<label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+								Description
+							</label>
+							<textarea 
+								name="description" 
+								id="description" 
+								rows="3"
+								class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+								placeholder="Brief description of this category..."
+							>{ getStringValue(formData, "description") }</textarea>
+							<p class="mt-1 text-sm text-gray-500">
+								Optional description to help users understand this category.
+							</p>
+						</div>
+
+						<!-- Submit Buttons -->
+						<div class="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
+							<a href="/admin/categories" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+								Cancel
+							</a>
+							<button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+								Create Category
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	}
+}

@@ -1,0 +1,317 @@
+package pages
+
+import (
+	"fmt"
+	"net/http"
+	"event-ticketing-platform/internal/models"
+	"event-ticketing-platform/web/templates/layouts"
+)
+
+// AdminSettingsPage renders the admin settings page
+templ AdminSettingsPage(user *models.User, settings *models.SystemSettings, formData map[string]interface{}, errors map[string]string) {
+	@layouts.BaseLayout("System Settings - Admin Panel", user) {
+		<div class="min-h-screen bg-gray-50 py-8">
+			<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+				<!-- Header -->
+				<div class="mb-8">
+					<div class="flex items-center justify-between">
+						<div>
+							<h1 class="text-3xl font-bold text-gray-900">System Settings</h1>
+							<p class="mt-2 text-gray-600">Configure platform-wide settings and policies</p>
+						</div>
+						<a href="/admin" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+							<svg class="mr-2 -ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+							</svg>
+							Back to Admin
+						</a>
+					</div>
+				</div>
+
+				<!-- Success Message -->
+				if r := ctx.Value("request"); r != nil {
+					if req, ok := r.(*http.Request); ok && req.URL.Query().Get("success") == "1" {
+						<div class="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
+							<div class="flex">
+								<div class="flex-shrink-0">
+									<svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+									</svg>
+								</div>
+								<div class="ml-3">
+									<p class="text-sm text-green-800">Settings updated successfully!</p>
+								</div>
+							</div>
+						</div>
+					}
+				}
+
+				<!-- Settings Form -->
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200">
+					if errors != nil && errors["general"] != "" {
+						<div class="p-6 border-b border-gray-200">
+							<div class="bg-red-50 border border-red-200 rounded-md p-4">
+								<div class="flex">
+									<div class="flex-shrink-0">
+										<svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+										</svg>
+									</div>
+									<div class="ml-3">
+										<p class="text-sm text-red-800">{ errors["general"] }</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					}
+
+					<form method="POST" action="/admin/settings" class="p-6 space-y-8">
+						<input type="hidden" name="csrf_token" value={ getCSRFToken(ctx) }/>
+
+						<!-- Financial Settings -->
+						<div>
+							<h3 class="text-lg font-medium text-gray-900 mb-4">Financial Settings</h3>
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+								<!-- Platform Fee Percentage -->
+								<div>
+									<label for="platform_fee_percentage" class="block text-sm font-medium text-gray-700 mb-2">
+										Platform Fee Percentage <span class="text-red-500">*</span>
+									</label>
+									<div class="relative">
+										<input 
+											type="number" 
+											name="platform_fee_percentage" 
+											id="platform_fee_percentage"
+											step="0.01"
+											min="0"
+											max="50"
+											value={ func() string {
+												if formData != nil && formData["platform_fee_percentage"] != nil {
+													if val, ok := formData["platform_fee_percentage"].(string); ok {
+														return val
+													}
+												}
+												return fmt.Sprintf("%.2f", settings.PlatformFeePercentage)
+											}() }
+											class={ "block w-full pr-12 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+												templ.KV("border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500", errors != nil && errors["platform_fee_percentage"] != ""),
+												templ.KV("border-gray-300", errors == nil || errors["platform_fee_percentage"] == "") }
+											placeholder="5.00"
+											required
+										/>
+										<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+											<span class="text-gray-500 sm:text-sm">%</span>
+										</div>
+									</div>
+									if errors != nil && errors["platform_fee_percentage"] != "" {
+										<p class="mt-2 text-sm text-red-600">{ errors["platform_fee_percentage"] }</p>
+									}
+									<p class="mt-2 text-sm text-gray-500">Percentage fee charged on each ticket sale</p>
+								</div>
+
+								<!-- Minimum Withdrawal Amount -->
+								<div>
+									<label for="min_withdrawal_amount" class="block text-sm font-medium text-gray-700 mb-2">
+										Minimum Withdrawal Amount <span class="text-red-500">*</span>
+									</label>
+									<div class="relative">
+										<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+											<span class="text-gray-500 sm:text-sm">$</span>
+										</div>
+										<input 
+											type="number" 
+											name="min_withdrawal_amount" 
+											id="min_withdrawal_amount"
+											step="0.01"
+											min="1"
+											value={ func() string {
+												if formData != nil && formData["min_withdrawal_amount"] != nil {
+													if val, ok := formData["min_withdrawal_amount"].(string); ok {
+														return val
+													}
+												}
+												return fmt.Sprintf("%.2f", settings.MinWithdrawalAmount)
+											}() }
+											class={ "block w-full pl-7 pr-12 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+												templ.KV("border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500", errors != nil && errors["min_withdrawal_amount"] != ""),
+												templ.KV("border-gray-300", errors == nil || errors["min_withdrawal_amount"] == "") }
+											placeholder="10.00"
+											required
+										/>
+									</div>
+									if errors != nil && errors["min_withdrawal_amount"] != "" {
+										<p class="mt-2 text-sm text-red-600">{ errors["min_withdrawal_amount"] }</p>
+									}
+									<p class="mt-2 text-sm text-gray-500">Minimum amount organizers can withdraw</p>
+								</div>
+
+								<!-- Maximum Withdrawal Amount -->
+								<div>
+									<label for="max_withdrawal_amount" class="block text-sm font-medium text-gray-700 mb-2">
+										Maximum Withdrawal Amount <span class="text-red-500">*</span>
+									</label>
+									<div class="relative">
+										<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+											<span class="text-gray-500 sm:text-sm">$</span>
+										</div>
+										<input 
+											type="number" 
+											name="max_withdrawal_amount" 
+											id="max_withdrawal_amount"
+											step="0.01"
+											min="1"
+											value={ func() string {
+												if formData != nil && formData["max_withdrawal_amount"] != nil {
+													if val, ok := formData["max_withdrawal_amount"].(string); ok {
+														return val
+													}
+												}
+												return fmt.Sprintf("%.2f", settings.MaxWithdrawalAmount)
+											}() }
+											class={ "block w-full pl-7 pr-12 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+												templ.KV("border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500", errors != nil && errors["max_withdrawal_amount"] != ""),
+												templ.KV("border-gray-300", errors == nil || errors["max_withdrawal_amount"] == "") }
+											placeholder="10000.00"
+											required
+										/>
+									</div>
+									if errors != nil && errors["max_withdrawal_amount"] != "" {
+										<p class="mt-2 text-sm text-red-600">{ errors["max_withdrawal_amount"] }</p>
+									}
+									<p class="mt-2 text-sm text-gray-500">Maximum amount organizers can withdraw at once</p>
+								</div>
+
+								<!-- Withdrawal Processing Days -->
+								<div>
+									<label for="withdrawal_processing_days" class="block text-sm font-medium text-gray-700 mb-2">
+										Withdrawal Processing Days <span class="text-red-500">*</span>
+									</label>
+									<input 
+										type="number" 
+										name="withdrawal_processing_days" 
+										id="withdrawal_processing_days"
+										min="1"
+										max="30"
+										value={ func() string {
+											if formData != nil && formData["withdrawal_processing_days"] != nil {
+												if val, ok := formData["withdrawal_processing_days"].(string); ok {
+													return val
+												}
+											}
+											return fmt.Sprintf("%d", settings.WithdrawalProcessingDays)
+										}() }
+										class={ "block w-full border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
+											templ.KV("border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500", errors != nil && errors["withdrawal_processing_days"] != ""),
+											templ.KV("border-gray-300", errors == nil || errors["withdrawal_processing_days"] == "") }
+										placeholder="3"
+										required
+									/>
+									if errors != nil && errors["withdrawal_processing_days"] != "" {
+										<p class="mt-2 text-sm text-red-600">{ errors["withdrawal_processing_days"] }</p>
+									}
+									<p class="mt-2 text-sm text-gray-500">Number of business days to process withdrawals</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Moderation Settings -->
+						<div class="border-t border-gray-200 pt-8">
+							<h3 class="text-lg font-medium text-gray-900 mb-4">Moderation Settings</h3>
+							<div class="space-y-4">
+								<!-- Event Moderation -->
+								<div class="flex items-start">
+									<div class="flex items-center h-5">
+										<input 
+											id="event_moderation_enabled" 
+											name="event_moderation_enabled" 
+											type="checkbox"
+											checked?={ func() bool {
+												if formData != nil && formData["event_moderation_enabled"] != nil {
+													if val, ok := formData["event_moderation_enabled"].(bool); ok {
+														return val
+													}
+												}
+												return settings.EventModerationEnabled
+											}() }
+											class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+										/>
+									</div>
+									<div class="ml-3 text-sm">
+										<label for="event_moderation_enabled" class="font-medium text-gray-700">Enable Event Moderation</label>
+										<p class="text-gray-500">Require admin approval before events are published</p>
+									</div>
+								</div>
+
+								<!-- Auto Approve Organizers -->
+								<div class="flex items-start">
+									<div class="flex items-center h-5">
+										<input 
+											id="auto_approve_organizers" 
+											name="auto_approve_organizers" 
+											type="checkbox"
+											checked?={ func() bool {
+												if formData != nil && formData["auto_approve_organizers"] != nil {
+													if val, ok := formData["auto_approve_organizers"].(bool); ok {
+														return val
+													}
+												}
+												return settings.AutoApproveOrganizers
+											}() }
+											class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+										/>
+									</div>
+									<div class="ml-3 text-sm">
+										<label for="auto_approve_organizers" class="font-medium text-gray-700">Auto-Approve Organizers</label>
+										<p class="text-gray-500">Automatically approve new organizer registrations</p>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- System Settings -->
+						<div class="border-t border-gray-200 pt-8">
+							<h3 class="text-lg font-medium text-gray-900 mb-4">System Settings</h3>
+							<div class="space-y-4">
+								<!-- Maintenance Mode -->
+								<div class="flex items-start">
+									<div class="flex items-center h-5">
+										<input 
+											id="maintenance_mode" 
+											name="maintenance_mode" 
+											type="checkbox"
+											checked?={ func() bool {
+												if formData != nil && formData["maintenance_mode"] != nil {
+													if val, ok := formData["maintenance_mode"].(bool); ok {
+														return val
+													}
+												}
+												return settings.MaintenanceMode
+											}() }
+											class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+										/>
+									</div>
+									<div class="ml-3 text-sm">
+										<label for="maintenance_mode" class="font-medium text-gray-700">Maintenance Mode</label>
+										<p class="text-gray-500">Put the platform in maintenance mode (only admins can access)</p>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Submit Button -->
+						<div class="border-t border-gray-200 pt-8">
+							<div class="flex justify-end">
+								<button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+									<svg class="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+									</svg>
+									Update Settings
+								</button>
+							</div>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	}
+}

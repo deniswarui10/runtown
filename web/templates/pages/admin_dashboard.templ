@@ -1,0 +1,189 @@
+package pages
+
+import (
+	"fmt"
+	"event-ticketing-platform/internal/models"
+	"event-ticketing-platform/web/templates/layouts"
+)
+
+// AdminDashboard renders the admin dashboard with system overview
+templ AdminDashboard(user *models.User, stats map[string]interface{}) {
+	@layouts.BaseLayout("Admin Dashboard - Event Ticketing Platform", user) {
+		<div class="min-h-screen bg-gray-50 py-8">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<!-- Header -->
+				<div class="mb-8">
+					<h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+					<p class="mt-2 text-gray-600">System overview and management</p>
+				</div>
+
+				<!-- Stats Grid -->
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+					<!-- Total Users -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<div class="flex items-center">
+							<div class="flex-shrink-0">
+								<svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+								</svg>
+							</div>
+							<div class="ml-4">
+								<p class="text-sm font-medium text-gray-500">Total Users</p>
+								<p class="text-2xl font-semibold text-gray-900">{ fmt.Sprintf("%d", stats["TotalUsers"]) }</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Active Users -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<div class="flex items-center">
+							<div class="flex-shrink-0">
+								<svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+								</svg>
+							</div>
+							<div class="ml-4">
+								<p class="text-sm font-medium text-gray-500">Active Users</p>
+								<p class="text-2xl font-semibold text-gray-900">{ fmt.Sprintf("%d", stats["ActiveUsers"]) }</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Total Events -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<div class="flex items-center">
+							<div class="flex-shrink-0">
+								<svg class="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+								</svg>
+							</div>
+							<div class="ml-4">
+								<p class="text-sm font-medium text-gray-500">Total Events</p>
+								<p class="text-2xl font-semibold text-gray-900">{ fmt.Sprintf("%d", stats["TotalEvents"]) }</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Total Revenue -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<div class="flex items-center">
+							<div class="flex-shrink-0">
+								<svg class="h-8 w-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+								</svg>
+							</div>
+							<div class="ml-4">
+								<p class="text-sm font-medium text-gray-500">Total Revenue</p>
+								<p class="text-2xl font-semibold text-gray-900">KSh { fmt.Sprintf("%.2f", stats["TotalRevenue"]) }</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Quick Actions -->
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+					<!-- User Management -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<h3 class="text-lg font-medium text-gray-900 mb-4">User Management</h3>
+						<p class="text-gray-600 mb-4">Manage user accounts, roles, and permissions</p>
+						<a href="/admin/users" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+							Manage Users
+							<svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+							</svg>
+						</a>
+					</div>
+
+					<!-- Category Management -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<h3 class="text-lg font-medium text-gray-900 mb-4">Category Management</h3>
+						<p class="text-gray-600 mb-4">Manage event categories and classifications</p>
+						<a href="/admin/categories" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+							Manage Categories
+							<svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+							</svg>
+						</a>
+					</div>
+				</div>
+
+				<!-- Second Row -->
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+					<!-- Withdrawal Management -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<h3 class="text-lg font-medium text-gray-900 mb-4">Withdrawal Management</h3>
+						<p class="text-gray-600 mb-4">Review and process organizer withdrawal requests</p>
+						<a href="/admin/withdrawals" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+							Manage Withdrawals
+							<svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+							</svg>
+						</a>
+					</div>
+
+					<!-- Event Moderation -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<h3 class="text-lg font-medium text-gray-900 mb-4">Event Moderation</h3>
+						<p class="text-gray-600 mb-4">Review and moderate event submissions</p>
+						<a href="/admin/events/moderate" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+							Moderate Events
+							<svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+							</svg>
+						</a>
+					</div>
+				</div>
+
+				<!-- Third Row -->
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+					<!-- System Settings -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<h3 class="text-lg font-medium text-gray-900 mb-4">System Settings</h3>
+						<p class="text-gray-600 mb-4">Configure platform fees, withdrawal limits, and moderation settings</p>
+						<a href="/admin/settings" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+							System Settings
+							<svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+							</svg>
+						</a>
+					</div>
+
+					<!-- Audit Logs -->
+					<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+						<h3 class="text-lg font-medium text-gray-900 mb-4">Audit Logs</h3>
+						<p class="text-gray-600 mb-4">View administrative action logs</p>
+						<button class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500" disabled>
+							Coming Soon
+							<svg class="ml-2 -mr-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+							</svg>
+						</button>
+					</div>
+				</div>
+
+				<!-- Recent Activity -->
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h3 class="text-lg font-medium text-gray-900">System Statistics</h3>
+					</div>
+					<div class="p-6">
+						<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+							<div class="text-center">
+								<p class="text-2xl font-semibold text-gray-900">{ fmt.Sprintf("%d", stats["PublishedEvents"]) }</p>
+								<p class="text-sm text-gray-500">Published Events</p>
+							</div>
+							<div class="text-center">
+								<p class="text-2xl font-semibold text-gray-900">{ fmt.Sprintf("%d", stats["TotalOrders"]) }</p>
+								<p class="text-sm text-gray-500">Total Orders</p>
+							</div>
+							<div class="text-center">
+								<p class="text-2xl font-semibold text-gray-900">{ fmt.Sprintf("%.1f%%", float64(stats["ActiveUsers"].(int)) / float64(stats["TotalUsers"].(int)) * 100) }</p>
+								<p class="text-sm text-gray-500">User Activity Rate</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}

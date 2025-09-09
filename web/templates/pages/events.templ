@@ -1,0 +1,284 @@
+package pages
+
+import "event-ticketing-platform/internal/models"
+import "event-ticketing-platform/web/templates/layouts"
+import "event-ticketing-platform/web/templates/components"
+import "event-ticketing-platform/web/templates/partials"
+import "fmt"
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+templ EventsListPage(user *models.User, events []*models.Event, categories []*models.Category, filters EventFilters, pagination components.Pagination) {
+	@layouts.BaseLayout("Browse Events", user) {
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			<!-- Page Header -->
+			<div class="mb-8 text-center">
+				<h1 class="text-4xl font-bold text-gray-900 mb-4">Discover Amazing Events</h1>
+				<p class="text-xl text-gray-600 max-w-3xl mx-auto">Find and book tickets for concerts, conferences, workshops, and more happening near you</p>
+			</div>
+
+			<!-- Filters -->
+			@partials.EventFilters(categories, filters.Category, filters.Location, filters.DateFrom, filters.DateTo)
+
+			<!-- Events Grid -->
+			<div id="events-list">
+				@EventsList(events, pagination)
+			</div>
+		</div>
+	}
+}
+
+templ EventsList(events []*models.Event, pagination components.Pagination) {
+	if len(events) > 0 {
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+			for _, event := range events {
+				@components.EventCard(event, true)
+			}
+		</div>
+		
+		<!-- Pagination -->
+		if pagination.TotalPages > 1 {
+			@components.PaginationComponent(pagination)
+		}
+	} else {
+		<div class="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-200">
+			<svg class="mx-auto h-16 w-16 text-gray-400 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+			</svg>
+			<h3 class="text-2xl font-medium text-gray-900 mb-3">No events found</h3>
+			<p class="text-gray-600 mb-8 max-w-md mx-auto">
+				We couldn't find any events matching your criteria. Try adjusting your filters or check back later.
+			</p>
+			<a href="/events" class="bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-lg font-medium transition-colors inline-block">
+				View All Events
+			</a>
+		</div>
+	}
+}
+
+templ EventDetailsPage(user *models.User, event *models.Event, ticketTypes []*models.TicketType, organizer *models.User) {
+	@layouts.BaseLayout(event.Title, user) {
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+				<!-- Event Details -->
+				<div class="lg:col-span-2">
+					<!-- Event Image -->
+					<div class="mb-8 rounded-xl overflow-hidden shadow-lg">
+						if event.ImageURL != "" {
+							<img src={ event.ImageURL } alt={ event.Title } class="w-full h-96 object-cover"/>
+						} else {
+							<div class="w-full h-96 bg-gradient-to-r from-primary-500 to-purple-600 flex items-center justify-center">
+								<svg class="h-32 w-32 text-white opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+								</svg>
+							</div>
+						}
+					</div>
+
+					<!-- Event Info -->
+					<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+						<div class="flex flex-wrap items-start justify-between gap-4 mb-8">
+							<div>
+								<h1 class="text-4xl font-bold text-gray-900 mb-3">{ event.Title }</h1>
+								<p class="text-xl text-gray-600">Organized by { organizer.FirstName } { organizer.LastName }</p>
+							</div>
+							<span class={ "px-4 py-2 text-base font-medium rounded-full",
+								templ.KV("bg-green-100 text-green-800", event.Status == models.StatusPublished),
+								templ.KV("bg-yellow-100 text-yellow-800", event.Status == models.StatusDraft),
+								templ.KV("bg-red-100 text-red-800", event.Status == models.StatusCancelled) }>
+								{ string(event.Status) }
+							</span>
+						</div>
+
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+							<div class="flex items-center text-gray-700 p-4 bg-gray-50 rounded-lg">
+								<svg class="h-8 w-8 mr-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+								</svg>
+								<div>
+									<p class="font-bold text-lg">{ event.StartDate.Format("Monday, January 2, 2006") }</p>
+									<p class="text-gray-600">{ event.StartDate.Format("3:04 PM") } - { event.EndDate.Format("3:04 PM") }</p>
+								</div>
+							</div>
+
+							<div class="flex items-center text-gray-700 p-4 bg-gray-50 rounded-lg">
+								<svg class="h-8 w-8 mr-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+								</svg>
+								<div>
+									<p class="font-bold text-lg">{ event.Location }</p>
+									<p class="text-gray-600">Venue Location</p>
+								</div>
+							</div>
+						</div>
+
+						<div class="prose max-w-none">
+							<h3 class="text-2xl font-bold text-gray-900 mb-4">About This Event</h3>
+							<p class="text-gray-700 text-lg whitespace-pre-line">{ event.Description }</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Ticket Selection -->
+				<div class="lg:col-span-1">
+					<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-8">
+						<h3 class="text-2xl font-bold text-gray-900 mb-6">Select Tickets</h3>
+						
+						if len(ticketTypes) > 0 {
+							<div class="space-y-6">
+								<div id="cart-message" class="hidden"></div>
+								
+								for _, ticketType := range ticketTypes {
+									@TicketTypeSelector(ticketType, event.ID, user != nil)
+								}
+								
+								<div class="border-t pt-6">
+									if user != nil {
+										<a 
+											href="/cart"
+											class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-4 rounded-lg font-bold text-center transition-colors mb-4 text-lg"
+										>
+											View Cart
+										</a>
+									} else {
+										<a 
+											href="/auth/login"
+											class="block w-full bg-primary-600 hover:bg-primary-700 text-white px-6 py-4 rounded-lg font-bold text-center transition-colors text-lg"
+										>
+											Login to Purchase
+										</a>
+									}
+								</div>
+							</div>
+						} else {
+							<div class="text-center py-12">
+								<svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+								</svg>
+								<h3 class="text-xl font-medium text-gray-900 mb-2">No tickets available</h3>
+								<p class="text-gray-600 mb-6">
+									Tickets for this event are currently unavailable.
+								</p>
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<script>
+			// Auto-hide cart messages after 5 seconds
+			document.body.addEventListener('htmx:afterRequest', function(event) {
+				if (event.detail.xhr.status === 200 && event.detail.target.id === 'cart-message') {
+					const messageDiv = document.getElementById('cart-message');
+					if (messageDiv && messageDiv.innerHTML.trim() !== '') {
+						// Hide message after 5 seconds
+						setTimeout(() => {
+							messageDiv.innerHTML = '';
+						}, 5000);
+					}
+				}
+			});
+		</script>
+	}
+}
+
+templ TicketTypeSelector(ticketType *models.TicketType, eventID int, isLoggedIn bool) {
+	<div class="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+		<div class="flex flex-wrap justify-between items-start mb-4 gap-3">
+			<div>
+				<h4 class="font-bold text-xl text-gray-900">{ ticketType.Name }</h4>
+				if ticketType.Description != "" {
+					<p class="text-gray-600 mt-1">{ ticketType.Description }</p>
+				}
+			</div>
+			<span class="text-2xl font-bold text-primary-600">
+				KSh { fmt.Sprintf("%.2f", float64(ticketType.Price)/100) }
+			</span>
+		</div>
+		
+		<div class="flex flex-wrap items-center justify-between gap-4">
+			<div class="text-gray-700">
+				<span class="font-medium">{ fmt.Sprintf("%d", ticketType.Available()) }</span>
+				<span class="text-gray-500"> available</span>
+			</div>
+			
+			if ticketType.IsAvailable() && isLoggedIn {
+				<form 
+					hx-post="/cart/add"
+					hx-target="#cart-message"
+					hx-swap="innerHTML"
+					class="flex items-center space-x-3"
+				>
+					<input type="hidden" name="csrf_token" value={ getCSRFToken(ctx) }/>
+					<input type="hidden" name="event_id" value={ fmt.Sprintf("%d", eventID) }/>
+					<input type="hidden" name="ticket_type_id" value={ fmt.Sprintf("%d", ticketType.ID) }/>
+					<select 
+						name="quantity" 
+						class="border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+					>
+						for i := 1; i <= min(10, ticketType.Available()); i++ {
+							<option value={ fmt.Sprintf("%d", i) }>{ fmt.Sprintf("%d", i) }</option>
+						}
+					</select>
+					<button 
+						type="submit"
+						class="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2 rounded-lg font-bold text-base transition-colors whitespace-nowrap"
+					>
+						Add to Cart
+					</button>
+				</form>
+			} else if !ticketType.IsAvailable() {
+				if ticketType.IsSoldOut() {
+					<span class="text-base font-bold text-red-600 bg-red-50 px-4 py-2 rounded-lg">
+						<svg class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+						Sold Out
+					</span>
+				} else if ticketType.SaleNotStarted() {
+					<span class="text-base font-bold text-yellow-600 bg-yellow-50 px-4 py-2 rounded-lg">
+						<svg class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+						</svg>
+						Sale Not Started
+					</span>
+				} else if ticketType.SaleEnded() {
+					<span class="text-base font-bold text-red-600 bg-red-50 px-4 py-2 rounded-lg">
+						<svg class="inline h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+						</svg>
+						Sales Ended
+					</span>
+				} else {
+					<span class="text-base font-bold text-gray-600 bg-gray-100 px-4 py-2 rounded-lg">
+						Not Available
+					</span>
+				}
+			} else {
+				<div class="text-base font-bold text-gray-600 bg-gray-100 px-4 py-2 rounded-lg">
+					<span>Login Required</span>
+					<a href="/login" class="ml-2 text-primary-600 hover:text-primary-700 underline">Login</a>
+				</div>
+			}
+		</div>
+		
+		<!-- Debug info - Remove in production -->
+		<div class="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">
+			Sale: { ticketType.SaleStart.Format("01/02 15:04") } - { ticketType.SaleEnd.Format("01/02 15:04") }
+		</div>
+	}
+}
+
+type EventFilters struct {
+	Category   string
+	Location   string
+	DateFrom   string
+	DateTo     string
+}

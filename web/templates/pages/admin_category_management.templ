@@ -1,0 +1,109 @@
+package pages
+
+import (
+	"fmt"
+	"event-ticketing-platform/internal/models"
+	"event-ticketing-platform/web/templates/layouts"
+)
+
+// AdminCategoryManagement renders the category management interface
+templ AdminCategoryManagement(user *models.User, categories []*models.Category) {
+	@layouts.BaseLayout("Category Management - Admin - Event Ticketing Platform", user) {
+		<div class="min-h-screen bg-gray-50 py-8">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<!-- Header -->
+				<div class="mb-8">
+					<div class="flex items-center justify-between">
+						<div>
+							<h1 class="text-3xl font-bold text-gray-900">Category Management</h1>
+							<p class="mt-2 text-gray-600">Manage event categories</p>
+						</div>
+						<div class="flex space-x-4">
+							<a href="/admin/categories/create" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+								<svg class="mr-2 -ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+									<path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+								</svg>
+								Add Category
+							</a>
+							<a href="/admin" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+								<svg class="mr-2 -ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+									<path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
+								</svg>
+								Back to Dashboard
+							</a>
+						</div>
+					</div>
+				</div>
+
+				<!-- Categories Table -->
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h3 class="text-lg font-medium text-gray-900">
+							Categories ({ fmt.Sprintf("%d", len(categories)) } total)
+						</h3>
+					</div>
+					
+					if len(categories) == 0 {
+						<div class="p-6 text-center">
+							<svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+							</svg>
+							<h3 class="mt-2 text-sm font-medium text-gray-900">No categories found</h3>
+							<p class="mt-1 text-sm text-gray-500">Get started by creating your first category.</p>
+							<div class="mt-6">
+								<a href="/admin/categories/create" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+									<svg class="mr-2 -ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+										<path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+									</svg>
+									Add Category
+								</a>
+							</div>
+						</div>
+					} else {
+						<div class="overflow-x-auto">
+							<table class="min-w-full divide-y divide-gray-200">
+								<thead class="bg-gray-50">
+									<tr>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+										<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+									</tr>
+								</thead>
+								<tbody class="bg-white divide-y divide-gray-200">
+									for _, category := range categories {
+										<tr>
+											<td class="px-6 py-4 whitespace-nowrap">
+												<div class="text-sm font-medium text-gray-900">{ category.Name }</div>
+											</td>
+											<td class="px-6 py-4 whitespace-nowrap">
+												<div class="text-sm text-gray-500">{ category.Slug }</div>
+											</td>
+											<td class="px-6 py-4">
+												<div class="text-sm text-gray-900">{ category.Description }</div>
+											</td>
+											<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+												<div class="flex items-center justify-end space-x-2">
+													<a href={ templ.URL(fmt.Sprintf("/admin/categories/%d/edit", category.ID)) } class="text-blue-600 hover:text-blue-900">
+														Edit
+													</a>
+													<form method="POST" action={ templ.URL(fmt.Sprintf("/admin/categories/%d", category.ID)) } class="inline">
+														<input type="hidden" name="_method" value="DELETE"/>
+														<input type="hidden" name="csrf_token" value={ getCSRFToken(ctx) }/>
+														<button type="submit" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to delete this category?')">
+															Delete
+														</button>
+													</form>
+												</div>
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+	}
+}

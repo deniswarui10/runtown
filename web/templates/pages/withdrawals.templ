@@ -1,0 +1,115 @@
+package pages
+
+import (
+	"fmt"
+	"event-ticketing-platform/internal/models"
+	"event-ticketing-platform/web/templates/layouts"
+)
+
+// WithdrawalsPage renders the organizer's withdrawals page
+templ WithdrawalsPage(user *models.User, withdrawals []*models.Withdrawal, availableBalance float64, pagination map[string]interface{}) {
+	@layouts.BaseLayout("Withdrawals - Event Ticketing Platform", user) {
+		<div class="min-h-screen bg-gray-50 py-8">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<!-- Header -->
+				<div class="mb-8">
+					<div class="flex items-center justify-between">
+						<div>
+							<h1 class="text-3xl font-bold text-gray-900">Withdrawals</h1>
+							<p class="mt-2 text-gray-600">Manage your withdrawal requests</p>
+						</div>
+						<div class="flex items-center space-x-4">
+							<div class="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-2">
+								<div class="text-sm text-gray-500">Available Balance</div>
+								<div class="text-2xl font-bold text-green-600">${ fmt.Sprintf("%.2f", availableBalance) }</div>
+							</div>
+							if availableBalance > 0 {
+								<a href="/organizer/withdrawals/create" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+									<svg class="mr-2 -ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+										<path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 011-1z" clip-rule="evenodd"/>
+									</svg>
+									Request Withdrawal
+								</a>
+							}
+						</div>
+					</div>
+				</div>
+
+				<!-- Withdrawals List -->
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h3 class="text-lg font-medium text-gray-900">
+							Withdrawal Requests ({ fmt.Sprintf("%d", len(withdrawals)) } total)
+						</h3>
+					</div>
+					
+					if len(withdrawals) == 0 {
+						<div class="p-6 text-center">
+							<svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+							</svg>
+							<h3 class="mt-2 text-sm font-medium text-gray-900">No withdrawal requests</h3>
+							<p class="mt-1 text-sm text-gray-500">You haven't made any withdrawal requests yet.</p>
+							if availableBalance >= 10 {
+								<div class="mt-6">
+									<a href="/organizer/withdrawals/create" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+										<svg class="mr-2 -ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+											<path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+										</svg>
+										Request Withdrawal
+									</a>
+								</div>
+							}
+						</div>
+					} else {
+						<div class="overflow-x-auto">
+							<table class="min-w-full divide-y divide-gray-200">
+								<thead class="bg-gray-50">
+									<tr>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Processed</th>
+									</tr>
+								</thead>
+								<tbody class="bg-white divide-y divide-gray-200">
+									for _, withdrawal := range withdrawals {
+										<tr>
+											<td class="px-6 py-4 whitespace-nowrap">
+												<div class="text-sm font-medium text-gray-900">${ fmt.Sprintf("%.2f", withdrawal.Amount) }</div>
+											</td>
+											<td class="px-6 py-4 whitespace-nowrap">
+												<span class={ "inline-flex px-2 py-1 text-xs font-semibold rounded-full",
+													templ.KV("bg-yellow-100 text-yellow-800", withdrawal.Status == models.WithdrawalStatusPending),
+													templ.KV("bg-green-100 text-green-800", withdrawal.Status == models.WithdrawalStatusApproved),
+													templ.KV("bg-blue-100 text-blue-800", withdrawal.Status == models.WithdrawalStatusCompleted),
+													templ.KV("bg-red-100 text-red-800", withdrawal.Status == models.WithdrawalStatusRejected) }>
+													{ string(withdrawal.Status) }
+												</span>
+											</td>
+											<td class="px-6 py-4">
+												<div class="text-sm text-gray-900">{ withdrawal.Reason }</div>
+											</td>
+											<td class="px-6 py-4 whitespace-nowrap">
+												<div class="text-sm text-gray-900">{ withdrawal.RequestedAt.Format("Jan 2, 2006") }</div>
+												<div class="text-sm text-gray-500">{ withdrawal.RequestedAt.Format("3:04 PM") }</div>
+											</td>
+											<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+												if withdrawal.ProcessedAt != nil {
+													{ withdrawal.ProcessedAt.Format("Jan 2, 2006") }
+												} else {
+													-
+												}
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+	}
+}

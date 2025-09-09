@@ -1,0 +1,155 @@
+package partials
+
+import (
+	"event-ticketing-platform/internal/models"
+	"fmt"
+)
+
+// Search results partial for HTMX responses
+templ SearchResults(events []*models.Event, query string) {
+	if len(events) > 0 {
+		<div class="bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
+			<div class="p-3 border-b border-gray-200">
+				<p class="text-sm text-gray-600">
+					Found { fmt.Sprintf("%d", len(events)) } results for "{ query }"
+				</p>
+			</div>
+			<div class="divide-y divide-gray-200">
+				for _, event := range events {
+					@SearchResultItem(event)
+				}
+			</div>
+			<div class="p-3 border-t border-gray-200">
+				<a href={ templ.URL("/events?q=" + query) } class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+					View all results →
+				</a>
+			</div>
+		</div>
+	} else if query != "" {
+		<div class="bg-white rounded-lg shadow-lg border border-gray-200 p-6 text-center">
+			<svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+			</svg>
+			<h3 class="text-lg font-medium text-gray-900 mb-2">No events found</h3>
+			<p class="text-gray-600 mb-4">
+				We couldn't find any events matching "{ query }". Try adjusting your search terms.
+			</p>
+			<a href="/events" class="text-primary-600 hover:text-primary-700 font-medium">
+				Browse all events →
+			</a>
+		</div>
+	}
+}
+
+templ SearchResultItem(event *models.Event) {
+	<a href={ templ.URL(fmt.Sprintf("/events/%d", event.ID)) } class="block p-4 hover:bg-gray-50 transition-colors">
+		<div class="flex items-center space-x-4">
+			<div class="flex-shrink-0">
+				if event.ImageURL != "" {
+					<img src={ event.ImageURL } alt={ event.Title } class="w-16 h-16 rounded-lg object-cover"/>
+				} else {
+					<div class="w-16 h-16 bg-gradient-to-r from-primary-400 to-purple-500 rounded-lg flex items-center justify-center">
+						<svg class="h-8 w-8 text-white opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+						</svg>
+					</div>
+				}
+			</div>
+			<div class="flex-1 min-w-0">
+				<h4 class="text-base font-medium text-gray-900 truncate">{ event.Title }</h4>
+				<p class="text-sm text-gray-500">{ event.StartDate.Format("Jan 2, 2006") } • { event.Location }</p>
+			</div>
+		</div>
+	</a>
+}
+
+// Event filters partial
+templ EventFilters(categories []*models.Category, selectedCategory, selectedLocation string, selectedDateFrom, selectedDateTo string) {
+	<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+		<h3 class="text-xl font-bold text-gray-900 mb-5">Filter Events</h3>
+		
+		<form hx-get="/events" hx-target="#events-list" hx-trigger="change" class="space-y-5">
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+				<!-- Category Filter -->
+				<div>
+					<label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+					<select name="category" id="category" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base">
+						<option value="">All Categories</option>
+						for _, category := range categories {
+							<option 
+								value={ category.Slug }
+								if category.Slug == selectedCategory {
+									selected
+								}
+							>
+								{ category.Name }
+							</option>
+						}
+					</select>
+				</div>
+				
+				<!-- Location Filter -->
+				<div>
+					<label for="location" class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+					<input 
+						type="text" 
+						name="location" 
+						id="location" 
+						value={ selectedLocation }
+						placeholder="Enter city or venue"
+						class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+					/>
+				</div>
+				
+				<!-- Date From Filter -->
+				<div>
+					<label for="date_from" class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+					<input 
+						type="date" 
+						name="date_from" 
+						id="date_from" 
+						value={ selectedDateFrom }
+						class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+					/>
+				</div>
+				
+				<!-- Date To Filter -->
+				<div>
+					<label for="date_to" class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+					<input 
+						type="date" 
+						name="date_to" 
+						id="date_to" 
+						value={ selectedDateTo }
+						class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+					/>
+				</div>
+			</div>
+			
+			<div class="flex justify-between items-center pt-4">
+				<button 
+					type="button" 
+					hx-get="/events" 
+					hx-target="#events-list"
+					class="text-gray-600 hover:text-gray-800 text-base font-medium"
+				>
+					Clear Filters
+				</button>
+				<button 
+					type="submit"
+					class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-bold transition-colors text-base"
+				>
+					Apply Filters
+				</button>
+			</div>
+		</form>
+	</div>
+}
+
+// Loading spinner partial
+templ LoadingSpinner() {
+	<div class="flex items-center justify-center py-12">
+		<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+		<span class="ml-3 text-gray-600">Loading...</span>
+	</div>
+}

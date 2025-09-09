@@ -1,0 +1,318 @@
+package pages
+
+import (
+	"fmt"
+	"event-ticketing-platform/internal/models"
+	"event-ticketing-platform/web/templates/layouts"
+)
+
+// AdminWithdrawalsPage renders the admin withdrawals management page
+templ AdminWithdrawalsPage(user *models.User, withdrawals []*models.Withdrawal, pagination map[string]interface{}, statusFilter string) {
+	@layouts.BaseLayout("Withdrawal Management - Event Ticketing Platform", user) {
+		<div class="min-h-screen bg-gray-50 py-8">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<!-- Header -->
+				<div class="mb-8">
+					<div class="flex items-center justify-between">
+						<div>
+							<h1 class="text-3xl font-bold text-gray-900">Withdrawal Management</h1>
+							<p class="mt-2 text-gray-600">Review and process organizer withdrawal requests</p>
+						</div>
+						<div class="flex items-center space-x-4">
+							<div class="text-sm text-gray-500">
+								Total: { fmt.Sprintf("%d", pagination["TotalCount"]) } withdrawals
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Filters -->
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+					<form method="GET" class="flex items-center space-x-4">
+						<div class="flex-1">
+							<label for="status" class="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+							<select name="status" id="status" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" onchange="this.form.submit()">
+								<option value="">All Statuses</option>
+								<option value="pending" selected?={ statusFilter == "pending" }>Pending</option>
+								<option value="approved" selected?={ statusFilter == "approved" }>Approved</option>
+								<option value="completed" selected?={ statusFilter == "completed" }>Completed</option>
+								<option value="rejected" selected?={ statusFilter == "rejected" }>Rejected</option>
+							</select>
+						</div>
+						<div class="flex-shrink-0">
+							<button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+								Apply Filter
+							</button>
+						</div>
+					</form>
+				</div>
+
+				<!-- Withdrawals Table -->
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+					if len(withdrawals) == 0 {
+						<div class="p-6 text-center">
+							<svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+							</svg>
+							<h3 class="mt-2 text-sm font-medium text-gray-900">No withdrawals found</h3>
+							<p class="mt-1 text-sm text-gray-500">
+								if statusFilter != "" {
+									No withdrawals with status "{ statusFilter }" found.
+								} else {
+									No withdrawal requests have been submitted yet.
+								}
+							</p>
+						</div>
+					} else {
+						<div class="overflow-x-auto">
+							<table class="min-w-full divide-y divide-gray-200">
+								<thead class="bg-gray-50">
+									<tr>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organizer</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Processed</th>
+										<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+									</tr>
+								</thead>
+								<tbody class="bg-white divide-y divide-gray-200">
+									for _, withdrawal := range withdrawals {
+										<tr class="hover:bg-gray-50">
+											<td class="px-6 py-4 whitespace-nowrap">
+												<div class="flex items-center">
+													<div class="flex-shrink-0 h-10 w-10">
+														<div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+															<span class="text-sm font-medium text-gray-700">
+																{ string(withdrawal.Organizer.FirstName[0]) }{ string(withdrawal.Organizer.LastName[0]) }
+															</span>
+														</div>
+													</div>
+													<div class="ml-4">
+														<div class="text-sm font-medium text-gray-900">
+															{ withdrawal.Organizer.FirstName } { withdrawal.Organizer.LastName }
+														</div>
+														<div class="text-sm text-gray-500">{ withdrawal.Organizer.Email }</div>
+													</div>
+												</div>
+											</td>
+											<td class="px-6 py-4 whitespace-nowrap">
+												<div class="text-sm font-medium text-gray-900">${ fmt.Sprintf("%.2f", withdrawal.Amount) }</div>
+											</td>
+											<td class="px-6 py-4 whitespace-nowrap">
+												<span class={ "inline-flex px-2 py-1 text-xs font-semibold rounded-full",
+													templ.KV("bg-yellow-100 text-yellow-800", withdrawal.Status == models.WithdrawalStatusPending),
+													templ.KV("bg-blue-100 text-blue-800", withdrawal.Status == models.WithdrawalStatusApproved),
+													templ.KV("bg-green-100 text-green-800", withdrawal.Status == models.WithdrawalStatusCompleted),
+													templ.KV("bg-red-100 text-red-800", withdrawal.Status == models.WithdrawalStatusRejected) }>
+													{ string(withdrawal.Status) }
+												</span>
+											</td>
+											<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+												{ withdrawal.RequestedAt.Format("Jan 2, 2006 15:04") }
+											</td>
+											<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+												if withdrawal.ProcessedAt != nil {
+													{ withdrawal.ProcessedAt.Format("Jan 2, 2006 15:04") }
+												} else {
+													-
+												}
+											</td>
+											<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+												<div class="flex items-center space-x-2">
+													<!-- View Details Button -->
+													<button 
+														type="button"
+														class="text-blue-600 hover:text-blue-900 view-withdrawal-btn"
+														data-withdrawal-id={ fmt.Sprintf("%d", withdrawal.ID) }
+													>
+														View
+													</button>
+													
+													if withdrawal.Status == models.WithdrawalStatusPending {
+														<!-- Approve Button -->
+														<button 
+															type="button"
+															class="text-green-600 hover:text-green-900 update-status-btn"
+															data-withdrawal-id={ fmt.Sprintf("%d", withdrawal.ID) }
+															data-status="approved"
+														>
+															Approve
+														</button>
+														
+														<!-- Reject Button -->
+														<button 
+															type="button"
+															class="text-red-600 hover:text-red-900 update-status-btn"
+															data-withdrawal-id={ fmt.Sprintf("%d", withdrawal.ID) }
+															data-status="rejected"
+														>
+															Reject
+														</button>
+													} else if withdrawal.Status == models.WithdrawalStatusApproved {
+														<!-- Mark Complete Button -->
+														<button 
+															type="button"
+															class="text-green-600 hover:text-green-900 update-status-btn"
+															data-withdrawal-id={ fmt.Sprintf("%d", withdrawal.ID) }
+															data-status="completed"
+														>
+															Complete
+														</button>
+													}
+												</div>
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					}
+				</div>
+
+				<!-- Pagination -->
+				if pagination["TotalPages"].(int) > 1 {
+					<div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-6 rounded-lg shadow-sm border border-gray-200">
+						<div class="flex-1 flex justify-between sm:hidden">
+							if pagination["HasPrev"].(bool) {
+								<a href={ templ.URL(fmt.Sprintf("?page=%d&status=%s", pagination["PrevPage"], statusFilter)) } class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+									Previous
+								</a>
+							}
+							if pagination["HasNext"].(bool) {
+								<a href={ templ.URL(fmt.Sprintf("?page=%d&status=%s", pagination["NextPage"], statusFilter)) } class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+									Next
+								</a>
+							}
+						</div>
+						<div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+							<div>
+								<p class="text-sm text-gray-700">
+									Showing page { fmt.Sprintf("%d", pagination["CurrentPage"]) } of { fmt.Sprintf("%d", pagination["TotalPages"]) }
+								</p>
+							</div>
+							<div>
+								<nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+									if pagination["HasPrev"].(bool) {
+										<a href={ templ.URL(fmt.Sprintf("?page=%d&status=%s", pagination["PrevPage"], statusFilter)) } class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+											<span class="sr-only">Previous</span>
+											<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+											</svg>
+										</a>
+									}
+									
+									<span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+										{ fmt.Sprintf("%d", pagination["CurrentPage"]) }
+									</span>
+									
+									if pagination["HasNext"].(bool) {
+										<a href={ templ.URL(fmt.Sprintf("?page=%d&status=%s", pagination["NextPage"], statusFilter)) } class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+											<span class="sr-only">Next</span>
+											<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+											</svg>
+										</a>
+									}
+								</nav>
+							</div>
+						</div>
+					</div>
+				}
+			</div>
+		</div>
+
+		<!-- Withdrawal Details Modal -->
+		<div id="withdrawalModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+			<div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+				<div class="mt-3">
+					<div class="flex items-center justify-between mb-4">
+						<h3 class="text-lg font-medium text-gray-900">Withdrawal Details</h3>
+						<button onclick="closeWithdrawalModal()" class="text-gray-400 hover:text-gray-600">
+							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+							</svg>
+						</button>
+					</div>
+					<div id="withdrawalDetails">
+						<!-- Details will be loaded here -->
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Status Update Modal -->
+		<div id="statusModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+			<div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+				<div class="mt-3">
+					<div class="flex items-center justify-between mb-4">
+						<h3 class="text-lg font-medium text-gray-900">Update Withdrawal Status</h3>
+						<button onclick="closeStatusModal()" class="text-gray-400 hover:text-gray-600">
+							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+							</svg>
+						</button>
+					</div>
+					<form id="statusUpdateForm" method="POST">
+						<input type="hidden" name="csrf_token" value={ getCSRFToken(ctx) }/>
+						<input type="hidden" name="status" id="newStatus"/>
+						
+						<div class="mb-4">
+							<label for="admin_notes" class="block text-sm font-medium text-gray-700 mb-2">Admin Notes</label>
+							<textarea name="admin_notes" id="admin_notes" rows="4" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Add notes about this status change..."></textarea>
+						</div>
+						
+						<div class="flex justify-end space-x-4">
+							<button type="button" onclick="closeStatusModal()" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+								Cancel
+							</button>
+							<button type="submit" class="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
+								Update Status
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				// Handle view withdrawal buttons
+				document.querySelectorAll('.view-withdrawal-btn').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						const id = this.getAttribute('data-withdrawal-id');
+						showWithdrawalDetails(id);
+					});
+				});
+
+				// Handle update status buttons
+				document.querySelectorAll('.update-status-btn').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						const id = this.getAttribute('data-withdrawal-id');
+						const status = this.getAttribute('data-status');
+						updateWithdrawalStatus(id, status);
+					});
+				});
+			});
+
+			function showWithdrawalDetails(id) {
+				// This would fetch withdrawal details via HTMX or fetch API
+				document.getElementById('withdrawalModal').classList.remove('hidden');
+			}
+
+			function closeWithdrawalModal() {
+				document.getElementById('withdrawalModal').classList.add('hidden');
+			}
+
+			function updateWithdrawalStatus(id, status) {
+				document.getElementById('newStatus').value = status;
+				document.getElementById('statusUpdateForm').action = '/admin/withdrawals/' + id + '/status';
+				document.getElementById('statusModal').classList.remove('hidden');
+			}
+
+			function closeStatusModal() {
+				document.getElementById('statusModal').classList.add('hidden');
+			}
+		</script>
+	}
+}

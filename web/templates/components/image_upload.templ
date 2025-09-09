@@ -1,0 +1,606 @@
+package components
+
+// ImageUploadComponent provides a reusable drag-and-drop image upload interface
+templ ImageUploadComponent(eventID int, showOptions bool) {
+	<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+		<h3 class="text-lg font-semibold text-gray-900 mb-4">Upload Image</h3>
+		
+		<!-- Drag and Drop Upload Area -->
+		<div 
+			id="upload-area"
+			class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-400 transition-colors cursor-pointer"
+			ondrop="handleDrop(event)"
+			ondragover="handleDragOver(event)"
+			ondragleave="handleDragLeave(event)"
+			onclick="document.getElementById('file-input').click()"
+		>
+			<svg class="mx-auto h-12 w-12 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+				<path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			<p class="text-lg text-gray-600 mb-2">Drag and drop your image here, or click to browse</p>
+			<p class="text-sm text-gray-500">Supports JPEG, PNG, WebP up to 5MB</p>
+			
+			<input 
+				type="file" 
+				id="file-input" 
+				accept="image/jpeg,image/png,image/webp" 
+				class="hidden"
+				onchange="handleFileSelect(event)"
+			/>
+		</div>
+
+		<!-- Upload Progress -->
+		<div id="upload-progress" class="hidden mt-4">
+			<div class="bg-gray-200 rounded-full h-2">
+				<div id="progress-bar" class="bg-primary-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+			</div>
+			<p id="progress-text" class="text-sm text-gray-600 mt-2">Uploading...</p>
+		</div>
+
+		<!-- Image Processing Options -->
+		if showOptions {
+			<div class="mt-6 border-t pt-6">
+				<h4 class="text-md font-medium text-gray-900 mb-4">Processing Options</h4>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div>
+						<label for="quality" class="block text-sm font-medium text-gray-700 mb-1">
+							JPEG Quality
+						</label>
+						<select id="quality" class="form-select w-full">
+							<option value="60">60% (Smaller file)</option>
+							<option value="75">75% (Good quality)</option>
+							<option value="85" selected>85% (High quality)</option>
+							<option value="95">95% (Maximum quality)</option>
+						</select>
+					</div>
+					<div>
+						<label for="enable-webp" class="block text-sm font-medium text-gray-700 mb-1">
+							WebP Support
+						</label>
+						<select id="enable-webp" class="form-select w-full">
+							<option value="true" selected>Enable WebP variants</option>
+							<option value="false">Disable WebP</option>
+						</select>
+					</div>
+					<div>
+						<label for="compression-level" class="block text-sm font-medium text-gray-700 mb-1">
+							PNG Compression
+						</label>
+						<select id="compression-level" class="form-select w-full">
+							<option value="3">Low compression</option>
+							<option value="6" selected>Medium compression</option>
+							<option value="9">High compression</option>
+						</select>
+					</div>
+				</div>
+			</div>
+		}
+
+		<!-- Image Preview -->
+		<div id="image-preview" class="hidden mt-6">
+			<h4 class="text-md font-medium text-gray-900 mb-4">Preview & Crop</h4>
+			<div class="relative bg-gray-100 rounded-lg overflow-hidden">
+				<div id="crop-container" class="relative">
+					<img id="preview-image" src="" alt="Preview" class="max-w-full h-auto"/>
+					<div id="crop-overlay" class="absolute inset-0 hidden">
+						<div class="absolute bg-black bg-opacity-50 inset-0"></div>
+						<div id="crop-area" class="absolute border-2 border-white cursor-move" style="left: 10%; top: 10%; width: 80%; height: 80%;">
+							<div class="absolute w-2 h-2 bg-white border border-gray-400 -top-1 -left-1 cursor-nw-resize" data-handle="nw"></div>
+							<div class="absolute w-2 h-2 bg-white border border-gray-400 -top-1 -right-1 cursor-ne-resize" data-handle="ne"></div>
+							<div class="absolute w-2 h-2 bg-white border border-gray-400 -bottom-1 -left-1 cursor-sw-resize" data-handle="sw"></div>
+							<div class="absolute w-2 h-2 bg-white border border-gray-400 -bottom-1 -right-1 cursor-se-resize" data-handle="se"></div>
+						</div>
+					</div>
+				</div>
+				<button 
+					onclick="clearPreview()"
+					class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm z-10"
+				>
+					×
+				</button>
+			</div>
+			
+			<!-- Crop Controls -->
+			<div class="mt-4 space-y-4">
+				<div class="flex items-center justify-between">
+					<div class="text-sm text-gray-600">
+						<span id="image-dimensions"></span>
+					</div>
+					<div class="flex space-x-2">
+						<button 
+							id="enable-crop-btn"
+							onclick="toggleCrop()"
+							class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+						>
+							Enable Crop
+						</button>
+						<button 
+							id="reset-crop-btn"
+							onclick="resetCrop()"
+							class="hidden bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+						>
+							Reset
+						</button>
+					</div>
+				</div>
+				
+				<!-- Aspect Ratio Presets -->
+				<div id="aspect-ratio-controls" class="hidden">
+					<label class="block text-sm font-medium text-gray-700 mb-2">Aspect Ratio</label>
+					<div class="flex flex-wrap gap-2">
+						<button onclick="setAspectRatio(null)" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-sm rounded transition-colors">Free</button>
+						<button onclick="setAspectRatio(1)" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-sm rounded transition-colors">1:1</button>
+						<button onclick="setAspectRatio(4/3)" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-sm rounded transition-colors">4:3</button>
+						<button onclick="setAspectRatio(16/9)" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-sm rounded transition-colors">16:9</button>
+						<button onclick="setAspectRatio(3/2)" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-sm rounded transition-colors">3:2</button>
+					</div>
+				</div>
+				
+				<div class="flex justify-end">
+					<button 
+						onclick="uploadPreviewedImage()"
+						class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+					>
+						Upload Image
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		let previewFile = null;
+		let uploadInProgress = false;
+		let cropEnabled = false;
+		let cropData = null;
+		let aspectRatio = null;
+		let isDragging = false;
+		let dragStart = { x: 0, y: 0 };
+		let resizeHandle = null;
+
+		// Drag and drop handlers
+		function handleDragOver(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			document.getElementById('upload-area').classList.add('border-primary-400', 'bg-primary-50');
+		}
+
+		function handleDragLeave(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			document.getElementById('upload-area').classList.remove('border-primary-400', 'bg-primary-50');
+		}
+
+		function handleDrop(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			document.getElementById('upload-area').classList.remove('border-primary-400', 'bg-primary-50');
+			
+			const files = e.dataTransfer.files;
+			if (files.length > 0) {
+				showImagePreview(files[0]);
+			}
+		}
+
+		function handleFileSelect(e) {
+			const files = e.target.files;
+			if (files.length > 0) {
+				showImagePreview(files[0]);
+			}
+		}
+
+		function showImagePreview(file) {
+			// Validate file
+			if (!file.type.startsWith('image/')) {
+				showErrorMessage('Please select an image file');
+				return;
+			}
+
+			if (file.size > 5 * 1024 * 1024) {
+				showErrorMessage('File size must be less than 5MB');
+				return;
+			}
+
+			previewFile = file;
+
+			// Create preview
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				const img = document.getElementById('preview-image');
+				img.src = e.target.result;
+				
+				// Show dimensions
+				img.onload = function() {
+					document.getElementById('image-dimensions').textContent = 
+						`${img.naturalWidth} × ${img.naturalHeight} pixels`;
+					initializeCrop();
+				};
+				
+				document.getElementById('image-preview').classList.remove('hidden');
+			};
+			reader.readAsDataURL(file);
+		}
+
+		function clearPreview() {
+			document.getElementById('image-preview').classList.add('hidden');
+			document.getElementById('file-input').value = '';
+			previewFile = null;
+			cropEnabled = false;
+			cropData = null;
+			document.getElementById('crop-overlay').classList.add('hidden');
+			document.getElementById('enable-crop-btn').textContent = 'Enable Crop';
+			document.getElementById('aspect-ratio-controls').classList.add('hidden');
+			document.getElementById('reset-crop-btn').classList.add('hidden');
+		}
+
+		function initializeCrop() {
+			const cropArea = document.getElementById('crop-area');
+			const cropOverlay = document.getElementById('crop-overlay');
+			
+			// Add event listeners for crop area
+			cropArea.addEventListener('mousedown', startDrag);
+			document.addEventListener('mousemove', drag);
+			document.addEventListener('mouseup', endDrag);
+			
+			// Add event listeners for resize handles
+			const handles = cropArea.querySelectorAll('[data-handle]');
+			handles.forEach(handle => {
+				handle.addEventListener('mousedown', startResize);
+			});
+		}
+
+		function toggleCrop() {
+			cropEnabled = !cropEnabled;
+			const overlay = document.getElementById('crop-overlay');
+			const btn = document.getElementById('enable-crop-btn');
+			const aspectControls = document.getElementById('aspect-ratio-controls');
+			const resetBtn = document.getElementById('reset-crop-btn');
+			
+			if (cropEnabled) {
+				overlay.classList.remove('hidden');
+				btn.textContent = 'Disable Crop';
+				aspectControls.classList.remove('hidden');
+				resetBtn.classList.remove('hidden');
+			} else {
+				overlay.classList.add('hidden');
+				btn.textContent = 'Enable Crop';
+				aspectControls.classList.add('hidden');
+				resetBtn.classList.add('hidden');
+			}
+		}
+
+		function resetCrop() {
+			const cropArea = document.getElementById('crop-area');
+			cropArea.style.left = '10%';
+			cropArea.style.top = '10%';
+			cropArea.style.width = '80%';
+			cropArea.style.height = '80%';
+			cropData = null;
+		}
+
+		function setAspectRatio(ratio) {
+			aspectRatio = ratio;
+			if (ratio && cropEnabled) {
+				// Adjust crop area to match aspect ratio
+				const cropArea = document.getElementById('crop-area');
+				const container = document.getElementById('crop-container');
+				const containerRect = container.getBoundingClientRect();
+				
+				let width = parseFloat(cropArea.style.width) / 100 * containerRect.width;
+				let height = width / ratio;
+				
+				if (height > containerRect.height * 0.8) {
+					height = containerRect.height * 0.8;
+					width = height * ratio;
+				}
+				
+				cropArea.style.width = (width / containerRect.width * 100) + '%';
+				cropArea.style.height = (height / containerRect.height * 100) + '%';
+			}
+		}
+
+		function startDrag(e) {
+			if (e.target.hasAttribute('data-handle')) return;
+			isDragging = true;
+			dragStart.x = e.clientX;
+			dragStart.y = e.clientY;
+			e.preventDefault();
+		}
+
+		function startResize(e) {
+			resizeHandle = e.target.getAttribute('data-handle');
+			isDragging = true;
+			dragStart.x = e.clientX;
+			dragStart.y = e.clientY;
+			e.preventDefault();
+			e.stopPropagation();
+		}
+
+		function drag(e) {
+			if (!isDragging) return;
+			
+			const cropArea = document.getElementById('crop-area');
+			const container = document.getElementById('crop-container');
+			const containerRect = container.getBoundingClientRect();
+			
+			const deltaX = e.clientX - dragStart.x;
+			const deltaY = e.clientY - dragStart.y;
+			
+			if (resizeHandle) {
+				// Handle resizing
+				const rect = cropArea.getBoundingClientRect();
+				let newWidth = rect.width;
+				let newHeight = rect.height;
+				let newLeft = rect.left - containerRect.left;
+				let newTop = rect.top - containerRect.top;
+				
+				switch (resizeHandle) {
+					case 'se':
+						newWidth = Math.max(20, rect.width + deltaX);
+						newHeight = Math.max(20, rect.height + deltaY);
+						break;
+					case 'sw':
+						newWidth = Math.max(20, rect.width - deltaX);
+						newHeight = Math.max(20, rect.height + deltaY);
+						newLeft = rect.left - containerRect.left + deltaX;
+						break;
+					case 'ne':
+						newWidth = Math.max(20, rect.width + deltaX);
+						newHeight = Math.max(20, rect.height - deltaY);
+						newTop = rect.top - containerRect.top + deltaY;
+						break;
+					case 'nw':
+						newWidth = Math.max(20, rect.width - deltaX);
+						newHeight = Math.max(20, rect.height - deltaY);
+						newLeft = rect.left - containerRect.left + deltaX;
+						newTop = rect.top - containerRect.top + deltaY;
+						break;
+				}
+				
+				// Maintain aspect ratio if set
+				if (aspectRatio) {
+					if (resizeHandle === 'se' || resizeHandle === 'nw') {
+						newHeight = newWidth / aspectRatio;
+					} else {
+						newWidth = newHeight * aspectRatio;
+					}
+				}
+				
+				// Ensure crop area stays within bounds
+				newLeft = Math.max(0, Math.min(newLeft, containerRect.width - newWidth));
+				newTop = Math.max(0, Math.min(newTop, containerRect.height - newHeight));
+				newWidth = Math.min(newWidth, containerRect.width - newLeft);
+				newHeight = Math.min(newHeight, containerRect.height - newTop);
+				
+				cropArea.style.left = (newLeft / containerRect.width * 100) + '%';
+				cropArea.style.top = (newTop / containerRect.height * 100) + '%';
+				cropArea.style.width = (newWidth / containerRect.width * 100) + '%';
+				cropArea.style.height = (newHeight / containerRect.height * 100) + '%';
+			} else {
+				// Handle moving
+				const rect = cropArea.getBoundingClientRect();
+				let newLeft = rect.left - containerRect.left + deltaX;
+				let newTop = rect.top - containerRect.top + deltaY;
+				
+				// Ensure crop area stays within bounds
+				newLeft = Math.max(0, Math.min(newLeft, containerRect.width - rect.width));
+				newTop = Math.max(0, Math.min(newTop, containerRect.height - rect.height));
+				
+				cropArea.style.left = (newLeft / containerRect.width * 100) + '%';
+				cropArea.style.top = (newTop / containerRect.height * 100) + '%';
+			}
+			
+			dragStart.x = e.clientX;
+			dragStart.y = e.clientY;
+		}
+
+		function endDrag() {
+			isDragging = false;
+			resizeHandle = null;
+		}
+
+		function getCropData() {
+			if (!cropEnabled) return null;
+			
+			const cropArea = document.getElementById('crop-area');
+			const container = document.getElementById('crop-container');
+			const img = document.getElementById('preview-image');
+			
+			const containerRect = container.getBoundingClientRect();
+			const cropRect = cropArea.getBoundingClientRect();
+			
+			// Calculate crop coordinates relative to the original image
+			const scaleX = img.naturalWidth / img.offsetWidth;
+			const scaleY = img.naturalHeight / img.offsetHeight;
+			
+			const x = (cropRect.left - containerRect.left) * scaleX;
+			const y = (cropRect.top - containerRect.top) * scaleY;
+			const width = cropRect.width * scaleX;
+			const height = cropRect.height * scaleY;
+			
+			return {
+				x: Math.round(x),
+				y: Math.round(y),
+				width: Math.round(width),
+				height: Math.round(height)
+			};
+		}
+
+		function uploadPreviewedImage() {
+			if (!previewFile) {
+				showErrorMessage('No image selected');
+				return;
+			}
+
+			if (uploadInProgress) {
+				showErrorMessage('Upload already in progress');
+				return;
+			}
+
+			uploadInProgress = true;
+			showUploadProgress();
+
+			// Get crop data if cropping is enabled
+			const cropInfo = getCropData();
+
+			// Create form data
+			const formData = new FormData();
+			formData.append('image', previewFile);
+			
+			// Add processing options if available
+			const qualitySelect = document.getElementById('quality');
+			const webpSelect = document.getElementById('enable-webp');
+			const compressionSelect = document.getElementById('compression-level');
+			
+			if (qualitySelect) formData.append('quality', qualitySelect.value);
+			if (webpSelect) formData.append('enable_webp', webpSelect.value);
+			if (compressionSelect) formData.append('compression_level', compressionSelect.value);
+			
+			// Add crop data if available
+			if (cropInfo) {
+				formData.append('crop_x', cropInfo.x.toString());
+				formData.append('crop_y', cropInfo.y.toString());
+				formData.append('crop_width', cropInfo.width.toString());
+				formData.append('crop_height', cropInfo.height.toString());
+			}
+
+			// Upload image
+			fetch(`/organizer/events/${ fmt.Sprintf("%d", eventID) }/images/upload`, {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				hideUploadProgress();
+				uploadInProgress = false;
+				
+				if (data.success) {
+					showSuccessMessage('Image uploaded successfully');
+					clearPreview();
+					
+					// Trigger custom event for parent components
+					window.dispatchEvent(new CustomEvent('imageUploaded', {
+						detail: { imageUrl: data.image_url, result: data.result }
+					}));
+				} else {
+					showErrorMessage(data.error || 'Upload failed');
+				}
+			})
+			.catch(error => {
+				hideUploadProgress();
+				uploadInProgress = false;
+				showErrorMessage('Upload failed: ' + error.message);
+			});
+		}
+
+		function showUploadProgress() {
+			document.getElementById('upload-progress').classList.remove('hidden');
+			// Simulate progress for now
+			let progress = 0;
+			const interval = setInterval(() => {
+				progress += 10;
+				document.getElementById('progress-bar').style.width = progress + '%';
+				if (progress >= 90) {
+					clearInterval(interval);
+				}
+			}, 200);
+		}
+
+		function hideUploadProgress() {
+			document.getElementById('upload-progress').classList.add('hidden');
+			document.getElementById('progress-bar').style.width = '0%';
+		}
+
+		function showSuccessMessage(message) {
+			const div = document.createElement('div');
+			div.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+			div.textContent = message;
+			document.body.appendChild(div);
+			setTimeout(() => {
+				if (document.body.contains(div)) {
+					document.body.removeChild(div);
+				}
+			}, 3000);
+		}
+
+		function showErrorMessage(message) {
+			const div = document.createElement('div');
+			div.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+			div.textContent = message;
+			document.body.appendChild(div);
+			setTimeout(() => {
+				if (document.body.contains(div)) {
+					document.body.removeChild(div);
+				}
+			}, 5000);
+		}
+	</script>
+}
+
+// ResponsiveImageDisplay shows an image with multiple variants for different screen sizes
+templ ResponsiveImageDisplay(imageURL string, variants map[string]string, alt string, cssClass string) {
+	if len(variants) > 0 {
+		<picture>
+			<!-- WebP variants for modern browsers -->
+			if webpLarge, hasWebPLarge := variants["large-webp"]; hasWebPLarge {
+				<source media="(min-width: 1024px)" srcset={ webpLarge } type="image/webp"/>
+			}
+			if webpMedium, hasWebPMedium := variants["medium-webp"]; hasWebPMedium {
+				<source media="(min-width: 768px)" srcset={ webpMedium } type="image/webp"/>
+			}
+			if webpThumb, hasWebPThumb := variants["thumbnail-webp"]; hasWebPThumb {
+				<source srcset={ webpThumb } type="image/webp"/>
+			}
+			
+			<!-- Fallback formats -->
+			if large, hasLarge := variants["large"]; hasLarge {
+				<source media="(min-width: 1024px)" srcset={ large }/>
+			}
+			if medium, hasMedium := variants["medium"]; hasMedium {
+				<source media="(min-width: 768px)" srcset={ medium }/>
+			}
+			if thumb, hasThumb := variants["thumbnail"]; hasThumb {
+				<source srcset={ thumb }/>
+			}
+			
+			<!-- Default fallback -->
+			<img src={ imageURL } alt={ alt } class={ cssClass } loading="lazy"/>
+		</picture>
+	} else {
+		<img src={ imageURL } alt={ alt } class={ cssClass } loading="lazy"/>
+	}
+}
+
+// ImageVariantSelector allows users to choose which image variant to use
+templ ImageVariantSelector(variants map[string]string, selectedVariant string, onChangeCallback string) {
+	<div class="flex flex-wrap gap-2">
+		<label class="text-sm font-medium text-gray-700 mr-2">Size:</label>
+		for variant, url := range variants {
+			<button 
+				type="button"
+				data-variant={ variant }
+				data-url={ url }
+				data-callback={ onChangeCallback }
+				class={ "variant-selector px-3 py-1 text-xs rounded transition-colors",
+					templ.KV("bg-primary-600 text-white", variant == selectedVariant),
+					templ.KV("bg-gray-200 text-gray-700 hover:bg-gray-300", variant != selectedVariant) }
+			>
+				{ variant }
+			</button>
+		}
+	</div>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			document.querySelectorAll('.variant-selector').forEach(button => {
+				button.addEventListener('click', function() {
+					const variant = this.dataset.variant;
+					const url = this.dataset.url;
+					const callback = this.dataset.callback;
+					if (window[callback]) {
+						window[callback](variant, url);
+					}
+				});
+			});
+		});
+	</script>
+}
