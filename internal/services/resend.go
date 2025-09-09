@@ -72,7 +72,7 @@ func (s *ResendEmailService) getFromField() string {
 
 // SendPasswordResetEmail sends a password reset email via Resend
 func (s *ResendEmailService) SendPasswordResetEmail(email, token string) error {
-	resetLink := fmt.Sprintf("http://localhost:8080/auth/reset-password?token=%s", token)
+	resetLink := fmt.Sprintf("https://runtown.onrender.com/auth/reset-password?token=%s", token)
 	
 	htmlContent := fmt.Sprintf(`
 <!DOCTYPE html>
@@ -106,7 +106,7 @@ func (s *ResendEmailService) SendPasswordResetEmail(email, token string) error {
             <p>For security reasons, please do not share this link with anyone.</p>
         </div>
         <div class="footer">
-            <p>Event Ticketing Platform Security Team</p>
+            <p>Runtown Security Team</p>
         </div>
     </div>
 </body>
@@ -126,7 +126,7 @@ If you didn't request a password reset, please ignore this email. Your password 
 
 For security reasons, please do not share this link with anyone.
 
-Event Ticketing Platform Security Team`, resetLink)
+Runtown Security Team`, resetLink)
 
 	request := ResendEmailRequest{
 		From:    s.getFromField(),
@@ -162,11 +162,11 @@ func (s *ResendEmailService) SendWelcomeEmail(email, userName string) error {
 <body>
     <div class="container">
         <div class="header">
-            <h1>Welcome to Event Ticketing Platform!</h1>
+            <h1>Welcome to Runtown!</h1>
         </div>
         <div class="content">
             <p>Dear %s,</p>
-            <p>Welcome to Event Ticketing Platform! We're excited to have you join our community.</p>
+            <p>Welcome to Runtown! We're excited to have you join our community.</p>
             
             <p>With your new account, you can:</p>
             <ul>
@@ -176,24 +176,24 @@ func (s *ResendEmailService) SendWelcomeEmail(email, userName string) error {
                 <li>Get notified about upcoming events</li>
             </ul>
             
-            <a href="https://yourapp.com/events" class="button">Start Exploring Events</a>
+            <a href="https://runtown.onrender.com/events" class="button">Start Exploring Events</a>
             
             <p>If you have any questions, feel free to contact our support team.</p>
             
             <p>Happy event hunting!</p>
         </div>
         <div class="footer">
-            <p>The Event Ticketing Platform Team</p>
+            <p>Runtown Team</p>
         </div>
     </div>
 </body>
 </html>`, userName)
 
-	textContent := fmt.Sprintf(`Welcome to Event Ticketing Platform!
+	textContent := fmt.Sprintf(`Welcome to Runtown!
 
 Dear %s,
 
-Welcome to Event Ticketing Platform! We're excited to have you join our community.
+Welcome to Runtown! We're excited to have you join our community.
 
 With your new account, you can:
 - Browse and discover amazing events
@@ -201,18 +201,18 @@ With your new account, you can:
 - Manage your orders and tickets
 - Get notified about upcoming events
 
-Start exploring events: https://yourapp.com/events
+Start exploring events: https://runtown.onrender.com/events
 
 If you have any questions, feel free to contact our support team.
 
 Happy event hunting!
 
-The Event Ticketing Platform Team`, userName)
+Runtown Team`, userName)
 
 	request := ResendEmailRequest{
 		From:    s.getFromField(),
 		To:      []string{email},
-		Subject: "Welcome to Event Ticketing Platform!",
+		Subject: "Welcome to Runtown!",
 		HTML:    htmlContent,
 		Text:    textContent,
 		Tags: []ResendTag{
@@ -225,7 +225,7 @@ The Event Ticketing Platform Team`, userName)
 
 // SendVerificationEmail sends an email verification link to new users
 func (s *ResendEmailService) SendVerificationEmail(email, userName, token string) error {
-	verificationLink := fmt.Sprintf("http://localhost:8080/auth/verify?token=%s", token)
+	verificationLink := fmt.Sprintf("https://runtown.onrender.com/auth/verify?token=%s", token)
 	
 	htmlContent := fmt.Sprintf(`
 <!DOCTYPE html>
@@ -250,7 +250,7 @@ func (s *ResendEmailService) SendVerificationEmail(email, userName, token string
         </div>
         <div class="content">
             <p>Dear %s,</p>
-            <p>Thank you for creating an account with Event Ticketing Platform! To complete your registration and access all features, please verify your email address by clicking the button below:</p>
+            <p>Thank you for creating an account with Runtown! To complete your registration and access all features, please verify your email address by clicking the button below:</p>
             
             <div style="text-align: center;">
                 <a href="%s" class="button">Verify My Email</a>
@@ -263,7 +263,7 @@ func (s *ResendEmailService) SendVerificationEmail(email, userName, token string
                 <p><strong>Important:</strong> This verification link will expire in 24 hours for security reasons.</p>
             </div>
             
-            <p>If you did not create an account with Event Ticketing Platform, please ignore this email.</p>
+            <p>If you did not create an account with Runtown, please ignore this email.</p>
             
             <p>Once your email is verified, you'll be able to:</p>
             <ul>
@@ -276,7 +276,7 @@ func (s *ResendEmailService) SendVerificationEmail(email, userName, token string
             <p>Welcome to the community!</p>
         </div>
         <div class="footer">
-            <p>The Event Ticketing Platform Team</p>
+            <p>Runtown Team</p>
         </div>
     </div>
 </body>
@@ -286,13 +286,13 @@ func (s *ResendEmailService) SendVerificationEmail(email, userName, token string
 
 Dear %s,
 
-Thank you for creating an account with Event Ticketing Platform! To complete your registration and access all features, please verify your email address by visiting the following link:
+Thank you for creating an account with Runtown! To complete your registration and access all features, please verify your email address by visiting the following link:
 
 %s
 
 Important: This verification link will expire in 24 hours for security reasons.
 
-If you did not create an account with Event Ticketing Platform, please ignore this email.
+If you did not create an account with Runtown, please ignore this email.
 
 Once your email is verified, you'll be able to:
 - Browse and discover amazing events
@@ -302,12 +302,12 @@ Once your email is verified, you'll be able to:
 
 Welcome to the community!
 
-The Event Ticketing Platform Team`, userName, verificationLink)
+The Runtown Team`, userName, verificationLink)
 
 	request := ResendEmailRequest{
 		From:    s.getFromField(),
 		To:      []string{email},
-		Subject: "Verify your email address - Event Ticketing Platform",
+		Subject: "Verify your email address - Runtown",
 		HTML:    htmlContent,
 		Text:    textContent,
 		Tags: []ResendTag{
@@ -354,10 +354,10 @@ func (s *ResendEmailService) SendOrderConfirmation(email, userName, orderNumber,
             <p>Your tickets will be sent to you in a separate email shortly.</p>
             <p>Please bring your tickets (printed or on your mobile device) to the event.</p>
             
-            <p>Thank you for choosing Event Ticketing Platform!</p>
+            <p>Thank you for choosing Runtown!</p>
         </div>
         <div class="footer">
-            <p>Event Ticketing Platform</p>
+            <p>Runtown</p>
         </div>
     </div>
 </body>
@@ -377,7 +377,7 @@ Total Amount: %s
 Your tickets will be sent to you in a separate email shortly.
 Please bring your tickets (printed or on your mobile device) to the event.
 
-Thank you for choosing Event Ticketing Platform!`, userName, eventTitle, eventDate, orderNumber, totalAmount)
+Thank you for choosing Runtown!`, userName, eventTitle, eventDate, orderNumber, totalAmount)
 
 	request := ResendEmailRequest{
 		From:    s.getFromField(),
@@ -450,7 +450,7 @@ func (s *ResendEmailService) enhanceOrderConfirmationHTML(originalHTML string, o
 			<div style="margin-top: 20px; padding: 15px; background-color: #dbeafe; border-radius: 6px; border-left: 4px solid #3b82f6;">
 				<p style="margin: 0; font-size: 14px; color: #1e40af;">
 					<strong>📱 Mobile Access:</strong> You can also access your tickets anytime from your account dashboard at 
-					<a href="http://localhost:8080/dashboard/orders/%d" style="color: #2563eb; text-decoration: none;">http://localhost:8080/dashboard/orders/%d</a>
+					<a href="https://runtown.onrender.com/dashboard/orders/%d" style="color: #2563eb; text-decoration: none;">https://runtown.onrender.com/dashboard/orders/%d</a>
 				</p>
 			</div>
 		</div>`
@@ -489,7 +489,7 @@ Generated: %s
 	ticketDetailsText += fmt.Sprintf(`MOBILE ACCESS
 =============
 You can access your tickets anytime from your account dashboard:
-http://localhost:8080/dashboard/orders/%d
+https://runtown.onrender.com/dashboard/orders/%d
 
 NEXT STEPS
 ==========
@@ -501,7 +501,7 @@ NEXT STEPS
 `, order.ID)
 
 	// Insert ticket details before the footer
-	footerIndex := strings.Index(originalText, "Event Ticketing Platform")
+	footerIndex := strings.Index(originalText, "Runtown")
 	if footerIndex != -1 {
 		return originalText[:footerIndex] + ticketDetailsText + originalText[footerIndex:]
 	}
