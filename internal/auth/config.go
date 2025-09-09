@@ -53,9 +53,9 @@ func NewAuthbossConfig(db *sql.DB, sessionStore sessions.Store, emailService ser
 
 	// Configure email settings
 	if emailService != nil {
-		ab.Config.Mail.From = "noreply@eventplatform.com"
-		ab.Config.Mail.FromName = "Event Platform"
-		ab.Config.Mail.SubjectPrefix = "[Event Platform] "
+		ab.Config.Mail.From = "noreply@runtown.com"
+		ab.Config.Mail.FromName = "Runtown"
+		ab.Config.Mail.SubjectPrefix = "[Runtown] "
 	}
 
 	// Configure security settings - BCryptCost is handled by the hasher
@@ -613,7 +613,7 @@ func (ac *AuthbossConfig) handleRegister(w http.ResponseWriter, r *http.Request)
 		
 		// Create email content
 		emailContent := fmt.Sprintf(`
-			<h2>Welcome to Event Platform!</h2>
+			<h2>Welcome to Runtown!</h2>
 			<p>Thank you for registering. Please click the link below to verify your email address:</p>
 			<p><a href="%s">Verify Email Address</a></p>
 			<p>If you didn't create this account, please ignore this email.</p>
@@ -1056,4 +1056,5 @@ func (ac *AuthbossConfig) SecurityAuditLog(event, userID, email string, r *http.
 // Close closes the Authboss configuration and releases resources
 func (ac *AuthbossConfig) Close() error {
 	return ac.Storage.Close()
+
 }
